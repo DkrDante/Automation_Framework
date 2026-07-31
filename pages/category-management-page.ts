@@ -35,6 +35,6 @@ export class CategoryManagementPage extends BasePage {
 
   async open() {
     const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
-    await super.goto(`${origin}/categories/manage`);
+    await this.page.goto(`${origin}/categories/manage`, { waitUntil: 'networkidle' });
   }
 }
