@@ -10,40 +10,41 @@ import path from 'path';
     const context = await browser.newContext({ storageState: statePath });
     const page = await context.newPage();
 
-    console.log('Navigating to Branding page...');
-    await page.goto(`${origin}/settings`, { waitUntil: 'networkidle' });
+    console.log('Navigating to Category Manager page...');
+    await page.goto(`${origin}/categories/manage`, { waitUntil: 'networkidle' });
 
     console.log('Page Title:', await page.title());
     
-    // Labels
-    const companyLogoLabel = page.getByText('Company Logo', { exact: true });
-    const companyNameLabel = page.getByText('Company Name', { exact: true });
-    const companyColorLabel = page.getByText('Company Color', { exact: true });
+    // Headings
+    const heading = page.getByRole('heading', { name: 'Category Manager' });
+    const subtitle = page.getByText('Create and organize categories for the asset library.');
+    const addSectionHeading = page.getByText('Add New Category', { exact: true });
 
-    console.log('Company Logo label visible?', await companyLogoLabel.isVisible());
-    console.log('Company Name label visible?', await companyNameLabel.isVisible());
-    console.log('Company Color label visible?', await companyColorLabel.isVisible());
+    console.log('Category Manager heading visible?', await heading.isVisible());
+    console.log('Subtitle visible?', await subtitle.isVisible());
+    console.log('Add New Category heading visible?', await addSectionHeading.isVisible());
 
     // Inputs
-    const companyNameInput = page.getByPlaceholder('Enter your company name');
-    console.log('Company Name input visible?', await companyNameInput.isVisible());
-    console.log('Company Name value:', await companyNameInput.inputValue());
+    const categoryNameInput = page.getByPlaceholder('Enter category name');
+    const subCategoryNameInput = page.getByPlaceholder('Enter a sub-category name');
+    const saveCategoryBtn = page.getByRole('button', { name: 'Save category' });
 
-    // Color input
-    const colorInput = page.locator('input[value^="#"], input[placeholder*="#"]');
-    console.log('Color input count:', await colorInput.count());
-    if (await colorInput.count() > 0) {
-        console.log('Color input value:', await colorInput.first().inputValue());
-    }
+    console.log('Category name input visible?', await categoryNameInput.isVisible());
+    console.log('Sub-category input visible?', await subCategoryNameInput.isVisible());
+    console.log('Save category button visible?', await saveCategoryBtn.isVisible());
 
-    // Helper texts
-    const logoHelperText = page.getByText('PNG, JPG up to 2MB. Recommended: 200x200px');
-    const colorHelperText = page.getByText('This color will be used in your shared experiences');
-    const charCountText = page.getByText(/\d+\/100 characters/);
+    // Table elements
+    const categoriesCountHeader = page.getByText(/Categories \(\d+\)/);
+    const reloadBtn = page.getByRole('button', { name: 'Reload' });
+    const nameCol = page.getByRole('columnheader', { name: 'Category name' });
+    const subCol = page.getByRole('columnheader', { name: 'Sub-category' });
+    const actionsCol = page.getByRole('columnheader', { name: 'Actions' });
 
-    console.log('Logo helper visible?', await logoHelperText.isVisible());
-    console.log('Color helper visible?', await colorHelperText.isVisible());
-    console.log('Char count visible?', await charCountText.isVisible());
+    console.log('Categories count header visible?', await categoriesCountHeader.isVisible());
+    console.log('Reload button visible?', await reloadBtn.isVisible());
+    console.log('Name col visible?', await nameCol.isVisible());
+    console.log('Sub col visible?', await subCol.isVisible());
+    console.log('Actions col visible?', await actionsCol.isVisible());
 
     await browser.close();
 })();
