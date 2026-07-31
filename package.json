@@ -7,17 +7,17 @@
     "test:ui": "playwright test tests/ui",
     "test:api": "playwright test tests/api",
     "test:regression": "playwright test --grep @regression",
-    "test:report": "run-tests.bat",
-    "report:generate": "allure generate",
-    "report:open": "allure open"
+    "test:report": "./run-tests.sh",
+    "report:generate": "allure awesome ./allure-results -o allure-report",
+    "report:open": "allure open ./allure-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.5.0",
-    "allure": "^3.11.0",
+    "allure": "^3.14.3",
     "allure-js-commons": "^3.10.0",
     "allure-playwright": "^3.10.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "typescript": "^5.5.0"
   }
 }
