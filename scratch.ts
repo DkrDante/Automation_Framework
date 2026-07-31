@@ -1,5 +1,4 @@
 import { chromium } from '@playwright/test';
-import fs from 'fs';
 import path from 'path';
 
 (async () => {
@@ -10,41 +9,53 @@ import path from 'path';
     const context = await browser.newContext({ storageState: statePath });
     const page = await context.newPage();
 
-    console.log('Navigating to Category Manager page...');
-    await page.goto(`${origin}/categories/manage`, { waitUntil: 'networkidle' });
+    // --- Background Management ---
+    console.log('\n======= Background Management (HDRI) =======');
+    await page.goto(`${origin}/hdri/manage`, { waitUntil: 'networkidle' });
 
-    console.log('Page Title:', await page.title());
-    
-    // Headings
-    const heading = page.getByRole('heading', { name: 'Category Manager' });
-    const subtitle = page.getByText('Create and organize categories for the asset library.');
-    const addSectionHeading = page.getByText('Add New Category', { exact: true });
+    const texts = await page.locator('h1, h2, h3, h4, label, th, button, p, input').allInnerTexts();
+    console.log('UI Texts:', texts.map(t => t.trim()).filter(t => t.length > 0).slice(0, 30));
 
-    console.log('Category Manager heading visible?', await heading.isVisible());
-    console.log('Subtitle visible?', await subtitle.isVisible());
-    console.log('Add New Category heading visible?', await addSectionHeading.isVisible());
-
-    // Inputs
-    const categoryNameInput = page.getByPlaceholder('Enter category name');
-    const subCategoryNameInput = page.getByPlaceholder('Enter a sub-category name');
-    const saveCategoryBtn = page.getByRole('button', { name: 'Save category' });
-
-    console.log('Category name input visible?', await categoryNameInput.isVisible());
-    console.log('Sub-category input visible?', await subCategoryNameInput.isVisible());
-    console.log('Save category button visible?', await saveCategoryBtn.isVisible());
-
-    // Table elements
-    const categoriesCountHeader = page.getByText(/Categories \(\d+\)/);
+    const addHdriHeading = page.getByText('Add New HDRI', { exact: true });
+    const nameInput = page.getByPlaceholder('HDRI name');
+    const uploadHdriBtn = page.getByRole('button', { name: 'Upload HDRI' });
+    const chooseHdriBtn = page.getByRole('button', { name: 'Choose HDRI' });
     const reloadBtn = page.getByRole('button', { name: 'Reload' });
-    const nameCol = page.getByRole('columnheader', { name: 'Category name' });
-    const subCol = page.getByRole('columnheader', { name: 'Sub-category' });
-    const actionsCol = page.getByRole('columnheader', { name: 'Actions' });
+    const hdriCatalogHeader = page.getByText(/HDRI Catalog \(\d+\)/);
+    const nameColHeader = page.getByRole('columnheader', { name: 'Name' });
+    const fileSizeColHeader = page.getByRole('columnheader', { name: 'File Size (MB)' });
+    const updatedByColHeader = page.getByRole('columnheader', { name: 'Updated By' });
+    const actionsColHeader = page.getByRole('columnheader', { name: 'Actions' });
 
-    console.log('Categories count header visible?', await categoriesCountHeader.isVisible());
-    console.log('Reload button visible?', await reloadBtn.isVisible());
-    console.log('Name col visible?', await nameCol.isVisible());
-    console.log('Sub col visible?', await subCol.isVisible());
-    console.log('Actions col visible?', await actionsCol.isVisible());
+    console.log('Add New HDRI heading?', await addHdriHeading.isVisible());
+    console.log('Name input?', await nameInput.isVisible());
+    console.log('Upload HDRI btn?', await uploadHdriBtn.isVisible());
+    console.log('Choose HDRI btn?', await chooseHdriBtn.isVisible());
+    console.log('Reload btn?', await reloadBtn.isVisible());
+    console.log('HDRI Catalog header?', await hdriCatalogHeader.isVisible());
+    console.log('Name col header?', await nameColHeader.isVisible());
+    console.log('File Size col header?', await fileSizeColHeader.isVisible());
+    console.log('Updated By col header?', await updatedByColHeader.isVisible());
+    console.log('Actions col header?', await actionsColHeader.isVisible());
+
+    // --- Material Management ---
+    console.log('\n======= Material Management =======');
+    await page.goto(`${origin}/material-presets/manage`, { waitUntil: 'networkidle' });
+
+    const matTexts = await page.locator('h1, h2, h3, h4, label, th, button, p').allInnerTexts();
+    console.log('UI Texts:', matTexts.map(t => t.trim()).filter(t => t.length > 0).slice(0, 30));
+
+    const matAddBtn = page.getByRole('button', { name: 'Add New' });
+    const matReloadBtn = page.getByRole('button', { name: 'Reload' });
+    const matHeader = page.getByText(/Materials \(\d+\)/);
+
+    console.log('Add New btn?', await matAddBtn.isVisible());
+    console.log('Reload btn?', await matReloadBtn.isVisible());
+    console.log('Materials header?', await matHeader.isVisible());
+
+    // Check table headers
+    const matTableHeaders = await page.locator('th').allInnerTexts();
+    console.log('Material table headers:', matTableHeaders.map(t => t.trim()).filter(t => t.length > 0));
 
     await browser.close();
 })();

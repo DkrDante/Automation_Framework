@@ -3,14 +3,18 @@ import { BasePage } from './base-page';
 
 export class MaterialManagementPage extends BasePage {
   readonly heading: Locator;
-  readonly reloadBtn: Locator;
+  readonly subTitle: Locator;
+  readonly addNewBtn: Locator;
   readonly materialsHeader: Locator;
+  readonly reloadBtn: Locator;
 
   constructor(page: Page) {
     super(page);
     this.heading = page.getByRole('heading', { name: 'Material Management' });
-    this.reloadBtn = page.getByRole('button', { name: 'Reload' });
+    this.subTitle = page.getByText('Upload, organize, and manage PBR (Physically-Based Rendering) materials to customize the look and feel of your 3D models.');
+    this.addNewBtn = page.getByRole('button', { name: 'Add New' });
     this.materialsHeader = page.getByText(/Materials \(\d+\)/);
+    this.reloadBtn = page.getByRole('button', { name: 'Reload' });
   }
 
   async open() {
