@@ -1,4 +1,4 @@
-import { request } from '@playwright/test';
+import { chromium } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -6,52 +6,43 @@ import path from 'path';
     const origin = 'https://try.satorixr.com';
     const statePath = path.resolve(__dirname, './.auth/state.json');
     
-    let extraHTTPHeaders = {};
-    if (fs.existsSync(statePath)) {
-        const state = JSON.parse(fs.readFileSync(statePath, 'utf-8'));
-        const originData = state.origins?.find((o: any) => o.origin === origin);
-        const tokenObj = originData?.localStorage?.find((item: any) => item.name === 'auth_token');
-        if (tokenObj) {
-            extraHTTPHeaders = { Authorization: `Bearer ${tokenObj.value}` };
-        }
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({ storageState: statePath });
+    const page = await context.newPage();
+
+    console.log('Navigating to home page...');
+    await page.goto(`${origin}/home`, { waitUntil: 'networkidle' });
+
+    // 1. Inspect Analytics UI
+    console.log('\n================ Analytics UI ================');
+    const analyticsBtn = page.getByText('Analytics', { exact: true });
+    if (await analyticsBtn.isVisible()) {
+        await analyticsBtn.click();
+        await page.waitForTimeout(2000);
+        console.log('URL:', page.url());
+        console.log('Title:', await page.title());
+        const texts = await page.locator('h1, h2, h3, h4, th, button, a').allInnerTexts();
+        console.log('Sample UI texts:', texts.map(h => h.trim()).filter(h => h.length > 0).slice(0, 20));
     }
 
-    const reqContext = await request.newContext({ 
-        baseURL: origin,
-        storageState: statePath,
-        extraHTTPHeaders
-    });
-
-    // Dump auth/verify-token, stats, and products[0] fully
-    const endpoints: [string, string][] = [
-        ['/api/auth/verify-token', 'full'],
-        ['/api/stats', 'full'],
-        ['/api/products', 'first'],
-        ['/api/scenes', 'first-nested'],
-    ];
-
-    for (const [ep, mode] of endpoints) {
-        const resp = await reqContext.get(ep);
-        console.log(`\n=== ${ep} ===`);
-        if (resp.status() === 200) {
-            const body = await resp.json();
-            if (mode === 'full') {
-                console.log(JSON.stringify(body, null, 2));
-            } else if (mode === 'first') {
-                if (Array.isArray(body) && body.length > 0) {
-                    console.log("KEYS:", Object.keys(body[0]));
-                    console.log(JSON.stringify(body[0], null, 2));
-                }
-            } else if (mode === 'first-nested') {
-                // e.g. { scenes: [...] }
-                for (const [k, v] of Object.entries(body)) {
-                    if (Array.isArray(v) && (v as any[]).length > 0) {
-                        console.log(`${k}[0] KEYS:`, Object.keys((v as any[])[0]));
-                        console.log(JSON.stringify((v as any[])[0], null, 2));
-                    }
-                }
-            }
-        }
+    // 2. Inspect Settings -> Usage UI
+    console.log('\n================ Settings -> Usage UI ================');
+    const settingsBtn = page.getByText('Settings', { exact: true });
+    if (await settingsBtn.isVisible()) {
+        await settingsBtn.click();
+        await page.waitForTimeout(1000);
     }
-    await reqContext.dispose();
+    const usageBtn = page.getByText('Usage', { exact: true });
+    if (await usageBtn.isVisible()) {
+        await usageBtn.click();
+        await page.waitForTimeout(2000);
+        console.log('URL:', page.url());
+        console.log('Title:', await page.title());
+        const texts = await page.locator('h1, h2, h3, h4, th, button, a').allInnerTexts();
+        console.log('Sample UI texts:', texts.map(h => h.trim()).filter(h => h.length > 0).slice(0, 20));
+    } else {
+        console.log('Usage button not found or visible');
+    }
+
+    await browser.close();
 })();
