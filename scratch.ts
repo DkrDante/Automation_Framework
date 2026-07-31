@@ -10,45 +10,40 @@ import path from 'path';
     const context = await browser.newContext({ storageState: statePath });
     const page = await context.newPage();
 
-    console.log('Navigating to User Management page...');
-    await page.goto(`${origin}/users`, { waitUntil: 'networkidle' });
+    console.log('Navigating to Branding page...');
+    await page.goto(`${origin}/settings`, { waitUntil: 'networkidle' });
 
-    // Check checkboxes
-    const checkboxes = page.locator('input[type="checkbox"]');
-    const count = await checkboxes.count();
-    console.log(`Total checkboxes found: ${count}`);
+    console.log('Page Title:', await page.title());
+    
+    // Labels
+    const companyLogoLabel = page.getByText('Company Logo', { exact: true });
+    const companyNameLabel = page.getByText('Company Name', { exact: true });
+    const companyColorLabel = page.getByText('Company Color', { exact: true });
 
-    // Check initial text and state of action buttons
-    const selectionText = page.locator('text=/\\d+ users? selected/');
-    console.log('Initial selection text:', await selectionText.innerText());
+    console.log('Company Logo label visible?', await companyLogoLabel.isVisible());
+    console.log('Company Name label visible?', await companyNameLabel.isVisible());
+    console.log('Company Color label visible?', await companyColorLabel.isVisible());
 
-    const enableBtn = page.getByRole('button', { name: 'Enable access' });
-    const disableBtn = page.getByRole('button', { name: 'Disable access' });
-    const deleteSelectedBtn = page.getByRole('button', { name: /Delete selected/ });
+    // Inputs
+    const companyNameInput = page.getByPlaceholder('Enter your company name');
+    console.log('Company Name input visible?', await companyNameInput.isVisible());
+    console.log('Company Name value:', await companyNameInput.inputValue());
 
-    console.log('Initial Enable access disabled?', await enableBtn.isDisabled());
-    console.log('Initial Disable access disabled?', await disableBtn.isDisabled());
-    console.log('Initial Delete selected button text:', await deleteSelectedBtn.innerText());
-
-    // Click the first row checkbox (index 1 if index 0 is header select all)
-    if (count > 1) {
-        console.log('\n--- Checking 1st user checkbox ---');
-        await checkboxes.nth(1).check();
-        await page.waitForTimeout(500);
-
-        console.log('Post-select text:', await selectionText.innerText());
-        console.log('Enable access enabled?', await enableBtn.isEnabled());
-        console.log('Disable access enabled?', await disableBtn.isEnabled());
-        console.log('Delete selected button text:', await deleteSelectedBtn.innerText());
-
-        // Uncheck
-        console.log('\n--- Unchecking user checkbox ---');
-        await checkboxes.nth(1).uncheck();
-        await page.waitForTimeout(500);
-
-        console.log('Post-unselect text:', await selectionText.innerText());
-        console.log('Enable access disabled?', await enableBtn.isDisabled());
+    // Color input
+    const colorInput = page.locator('input[value^="#"], input[placeholder*="#"]');
+    console.log('Color input count:', await colorInput.count());
+    if (await colorInput.count() > 0) {
+        console.log('Color input value:', await colorInput.first().inputValue());
     }
+
+    // Helper texts
+    const logoHelperText = page.getByText('PNG, JPG up to 2MB. Recommended: 200x200px');
+    const colorHelperText = page.getByText('This color will be used in your shared experiences');
+    const charCountText = page.getByText(/\d+\/100 characters/);
+
+    console.log('Logo helper visible?', await logoHelperText.isVisible());
+    console.log('Color helper visible?', await colorHelperText.isVisible());
+    console.log('Char count visible?', await charCountText.isVisible());
 
     await browser.close();
 })();
