@@ -16,6 +16,6 @@ export class LoginPage extends BasePage {
   }
 
   async open() {
-    await super.goto(process.env.BASE_URL ?? 'https://try.satorixr.com/login');
+    await super.goto(process.env.BASE_URL ?? 'https://try.satorixr.com');
   }
 }
