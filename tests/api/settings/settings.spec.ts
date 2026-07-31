@@ -12,6 +12,8 @@ test.describe('Settings API Exhaustive', { tag: ['@api', '@regression'] }, () =>
         expect(settingsResponse.success).toBe(true);
         expect(settingsResponse).toHaveProperty('settings');
         expect(settingsResponse).toHaveProperty('tenant');
+        expect(typeof settingsResponse.tenant).toBe('string');
+        expect(settingsResponse.tenant.length).toBeGreaterThan(0);
     });
 
     test('settings_object_has_all_fields_with_correct_types', () => {
@@ -33,5 +35,26 @@ test.describe('Settings API Exhaustive', { tag: ['@api', '@regression'] }, () =>
 
         expect(typeof settings.createdAt).toBe('string');
         expect(typeof settings.updatedAt).toBe('string');
+    });
+
+    test('settings_company_color_is_valid_hex', () => {
+        const settings = settingsResponse.settings;
+        expect(settings.companyColor).toMatch(/^#[0-9a-fA-F]{6}$/);
+    });
+
+    test('settings_timestamps_are_valid_iso8601', () => {
+        const settings = settingsResponse.settings;
+        const createdAt = new Date(settings.createdAt);
+        const updatedAt = new Date(settings.updatedAt);
+        expect(createdAt.toString()).not.toBe('Invalid Date');
+        expect(updatedAt.toString()).not.toBe('Invalid Date');
+        expect(updatedAt.getTime()).toBeGreaterThanOrEqual(createdAt.getTime());
+    });
+
+    test('settings_company_logo_is_valid_path', () => {
+        const settings = settingsResponse.settings;
+        if (settings.companyLogo.length > 0) {
+            expect(settings.companyLogo).toMatch(/\.(png|jpg|jpeg|svg|webp)$/i);
+        }
     });
 });
