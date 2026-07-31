@@ -22,33 +22,36 @@ import path from 'path';
         extraHTTPHeaders
     });
 
-    const endpoints = [
-        '/api/settings',
-        '/api/categories',
-        '/api/users',
-        '/api/new-analytics/portfolio',
-        '/api/new-analytics/filter-options'
+    // Dump auth/verify-token, stats, and products[0] fully
+    const endpoints: [string, string][] = [
+        ['/api/auth/verify-token', 'full'],
+        ['/api/stats', 'full'],
+        ['/api/products', 'first'],
+        ['/api/scenes', 'first-nested'],
     ];
 
-    for (const ep of endpoints) {
+    for (const [ep, mode] of endpoints) {
         const resp = await reqContext.get(ep);
-        console.log(`\n\n--- ${ep} ---`);
+        console.log(`\n=== ${ep} ===`);
         if (resp.status() === 200) {
             const body = await resp.json();
-            // Just print a sample or schema structure
-            if (Array.isArray(body) && body.length > 0) {
-                console.log("Array, item [0]:", JSON.stringify(body[0], null, 2).substring(0, 500));
-            } else if (body && typeof body === 'object') {
-                if (body.data && Array.isArray(body.data) && body.data.length > 0) {
-                     console.log("Object with data array, item [0]:", JSON.stringify(body.data[0], null, 2).substring(0, 500));
-                } else {
-                     console.log("Object:", JSON.stringify(body, null, 2).substring(0, 500));
+            if (mode === 'full') {
+                console.log(JSON.stringify(body, null, 2));
+            } else if (mode === 'first') {
+                if (Array.isArray(body) && body.length > 0) {
+                    console.log("KEYS:", Object.keys(body[0]));
+                    console.log(JSON.stringify(body[0], null, 2));
                 }
-            } else {
-                console.log(body);
+            } else if (mode === 'first-nested') {
+                // e.g. { scenes: [...] }
+                for (const [k, v] of Object.entries(body)) {
+                    if (Array.isArray(v) && (v as any[]).length > 0) {
+                        console.log(`${k}[0] KEYS:`, Object.keys((v as any[])[0]));
+                        console.log(JSON.stringify((v as any[])[0], null, 2));
+                    }
+                }
             }
-        } else {
-            console.log(`Status: ${resp.status()} - ${await resp.text()}`);
         }
     }
+    await reqContext.dispose();
 })();
