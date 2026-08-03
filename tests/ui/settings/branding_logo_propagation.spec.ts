@@ -57,6 +57,8 @@ test.describe('Settings — Company Branding Logo Propagation', { tag: ['@ui', '
     await experiencePage.open();
     await expect(experiencePage.heading).toBeVisible();
 
+    await experiencePage.search(experiencesData.search.term);
+    await expect(experiencePage.card(experiencesData.search.expected_title)).toBeVisible();
     await experiencePage.viewExperience(experiencesData.search.expected_title);
     const viewerPage = new ExperienceViewerPage(page);
     await viewerPage.waitForModelToLoad();
