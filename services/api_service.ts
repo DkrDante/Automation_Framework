@@ -69,6 +69,18 @@ export class ApiService {
         });
     }
 
+    async getMaterialPresets(): Promise<any[]> {
+        return test.step('API — fetch material presets', async () => {
+            return this._get('/api/material-presets');
+        });
+    }
+
+    async deleteMaterialPreset(id: string): Promise<any> {
+        return test.step(`API — delete material preset "${id}"`, async () => {
+            return this._delete(`/api/material-presets/${id}`);
+        });
+    }
+
     async getSettings(): Promise<any> {
         return test.step('API — fetch settings', async () => {
             return this._get('/api/settings');
