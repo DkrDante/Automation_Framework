@@ -30,7 +30,7 @@ export class MaterialManagementPage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
     await super.goto(`${origin}/material-presets/manage`);
     // Materials list (and the Reload/Add New buttons alongside it) render asynchronously
     // after the shell — wait once here so assertions aren't racing that load under concurrent workers.

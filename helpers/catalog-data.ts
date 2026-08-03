@@ -58,8 +58,12 @@ export const productsInCategory = (
 ) => products.filter((p) => p[level] === slug);
 
 /**
- * Scenes whose linked products sit under a category. Scenes reach products
- * through `productIds`, falling back to the legacy single `productId`.
+ * Scenes whose *primary* linked product sits under a category. The app
+ * attributes a scene to a category via its primary product only — a
+ * multi-product scene's other (non-primary) products can belong to
+ * different categories entirely without affecting the scene's own
+ * category membership. Primary is `productId`, falling back to the first
+ * entry of `productIds` when `productId` is absent.
  */
 export function scenesInCategory(
   scenes: Scene[],
@@ -68,5 +72,8 @@ export function scenesInCategory(
   level: CategoryLevel = 'category'
 ): Scene[] {
   const productIds = new Set(productsInCategory(products, slug, level).map((p) => p.id));
-  return scenes.filter((s) => (s.productIds ?? [s.productId]).some((id) => productIds.has(id)));
+  return scenes.filter((s) => {
+    const primaryProductId = s.productId ?? s.productIds?.[0];
+    return primaryProductId !== undefined && productIds.has(primaryProductId);
+  });
 }

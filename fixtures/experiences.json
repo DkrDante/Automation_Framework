@@ -24,15 +24,15 @@
   "empty_state_heading": "No matching experiences",
   "empty_state_hint": "Try adjusting your search or filters",
   "search": {
-    "term": "uno",
-    "term_uppercase": "UNO",
-    "term_partial": "Uno Exp",
-    "expected_title": "Uno Experience",
+    "term": "drone",
+    "term_uppercase": "DRONE",
+    "term_partial": "Drone Exp",
+    "expected_title": "Drone Experience",
     "no_match_term": "zzz-no-such-experience"
   },
   "category": {
     "label": "Automotive",
     "slug": "automotive",
-    "sub_slug": "truck"
+    "sub_slug": "trucks"
   }
 }

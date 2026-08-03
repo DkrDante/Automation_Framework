@@ -20,7 +20,10 @@ export class BrandingPage extends BasePage {
 
   constructor(page: Page) {
     super(page);
-    this.heading = page.getByRole('heading', { name: 'Company Branding' });
+    // The settings page also renders a level-2 "Company Branding" section header
+    // inside the form itself, alongside this page-level title — scope to level 1
+    // so the locator stays unique instead of a strict-mode violation.
+    this.heading = page.getByRole('heading', { name: 'Company Branding', level: 1 });
     this.companyLogoLabel = page.getByText('Company Logo', { exact: true });
     this.uploadLogoBtn = page.getByRole('button', { name: 'Upload Logo' });
     this.removeBtn = page.getByRole('button', { name: 'Remove' });
@@ -38,7 +41,7 @@ export class BrandingPage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
     await super.goto(`${origin}/settings`);
   }
 

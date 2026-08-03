@@ -14,7 +14,7 @@ export class HomePage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com').origin;
     await super.goto(`${origin}/home`);
     // Overview stats load asynchronously after the shell renders — wait once here
     // so every subsequent assertion isn't racing the same slow dashboard API.

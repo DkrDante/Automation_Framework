@@ -44,7 +44,7 @@ export class BackgroundManagementPage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
     await this.page.goto(`${origin}/hdri/manage`, { waitUntil: 'networkidle' });
   }
 

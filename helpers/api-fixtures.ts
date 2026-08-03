@@ -7,7 +7,7 @@ export const STORAGE_STATE_PATH = process.env.AUTH_STORAGE_STATE ?? path.resolve
 
 export const test = base.extend<{}, { dashboardApi: ApiService }>({
     dashboardApi: [async ({ playwright }, use, workerInfo) => {
-        const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+        const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
         
         let extraHTTPHeaders = {};
         if (fs.existsSync(STORAGE_STATE_PATH)) {

@@ -26,14 +26,19 @@ test.describe('Workflow — Company Branding: upload a logo, save, and confirm e
 
   // Branding is tenant-wide persistent state, so restore it even when the test fails
   // mid-flow — otherwise a broken run leaves the test company name on the real tenant.
-  test.afterAll(async ({ browser, dashboardApi }) => {
+  test.afterAll(async ({ browser, dashboardApi }, testInfo) => {
+    // Fetching the original logo, re-uploading it, and waiting on the save PUT is
+    // several real network round trips against a live environment — the default
+    // 30s hook timeout is too tight for that combined with page navigation.
+    testInfo.setTimeout(90000);
+
     const context = await browser.newContext({ storageState: STORAGE_STATE_PATH });
     const page = await context.newPage();
     const brandingPage = new BrandingPage(page);
     await brandingPage.open();
 
     if (originalCompanyLogo) {
-      const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+      const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
       const logoUrl = originalCompanyLogo.startsWith('http')
         ? originalCompanyLogo
         : `${origin}/api${originalCompanyLogo}`;
@@ -42,7 +47,10 @@ test.describe('Workflow — Company Branding: upload a logo, save, and confirm e
       const tmpFile = path.join(os.tmpdir(), `restore-logo-${Date.now()}${path.extname(logoUrl) || '.jpg'}`);
       fs.writeFileSync(tmpFile, buffer);
       await brandingPage.uploadLogo(tmpFile);
-      fs.unlinkSync(tmpFile);
+      // Best-effort: on Windows the upload can leave a brief file lock behind
+      // (EBUSY), and this is a scratch temp file the OS reclaims anyway — a
+      // stuck delete shouldn't fail the branding restore that follows.
+      await fs.promises.rm(tmpFile, { force: true }).catch(() => {});
     } else {
       await brandingPage.removeLogo();
     }

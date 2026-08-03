@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
 
 test.describe('Manifest', { tag: ['@api', '@regression'] }, () => {
   test('GET /manifest.json', async ({ request }) => {

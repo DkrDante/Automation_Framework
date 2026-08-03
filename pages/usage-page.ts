@@ -57,7 +57,7 @@ export class UsagePage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
     // networkidle never resolves here — the app polls persistently (see CLAUDE.md) —
     // so wait for the one concrete element the credits card renders once its data lands.
     await super.goto(`${origin}/usage`);

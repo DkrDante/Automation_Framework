@@ -113,7 +113,7 @@ export class AnalyticsPage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com/login').origin;
     await this.page.goto(`${origin}/new-analytics`, { waitUntil: 'domcontentloaded' });
     // The shell paints in ~450ms but the dashboard's data arrives separately (~750ms
     // unloaded, far longer under concurrent workers). Wait for one concrete data-backed

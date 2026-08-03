@@ -17,15 +17,15 @@
   "empty_state_heading": "No matching products",
   "empty_state_hint": "Try adjusting your search or filters",
   "search": {
-    "term": "arduino",
-    "term_uppercase": "ARDUINO",
-    "term_partial": "Arduino U",
-    "expected_title": "Arduino UNO",
+    "term": "perseverance",
+    "term_uppercase": "PERSEVERANCE",
+    "term_partial": "Perseverance Mars",
+    "expected_title": "Perseverance Mars Rover",
     "no_match_term": "zzz-no-such-product"
   },
   "category": {
     "label": "Automotive",
     "slug": "automotive",
-    "sub_slug": "truck"
+    "sub_slug": "trucks"
   }
 }

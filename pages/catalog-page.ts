@@ -69,7 +69,7 @@ export class CatalogPage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com').origin;
+    const origin = new URL(process.env.DEV_BASE_URL ?? 'https://dev.devsatorixr.com').origin;
     await super.goto(`${origin}${this.fixture.route}`);
 
     await this.heading.waitFor({ state: 'visible' });

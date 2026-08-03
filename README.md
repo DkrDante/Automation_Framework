@@ -1,6 +1,6 @@
 # Automation Framework
 
-Playwright + TypeScript test automation for **SatoriXR** (`https://try.satorixr.com`), reporting through **Allure Report 3**.
+Playwright + TypeScript test automation for **SatoriXR** (dev environment: `DEV_BASE_URL` in `.env`), reporting through **Allure Report 3**.
 
 ## Stack
 
@@ -44,7 +44,7 @@ Tests are split into `tests/ui`, `tests/api`, `tests/workflow`, and `tests/consi
 
 ## Page Object Model
 
-Every page object extends [`pages/base-page.ts`](pages/base-page.ts), which wraps the common `Page` operations (`goto`, `waitForLoad`, `title`). Example: [`pages/login-page.ts`](pages/login-page.ts) exposes locators for the login screen and an `open()` method that navigates to `BASE_URL`.
+Every page object extends [`pages/base-page.ts`](pages/base-page.ts), which wraps the common `Page` operations (`goto`, `waitForLoad`, `title`). Example: [`pages/login-page.ts`](pages/login-page.ts) exposes locators for the login screen and an `open()` method that navigates to `DEV_BASE_URL`.
 
 ```ts
 const loginPage = new LoginPage(page);
@@ -65,7 +65,7 @@ async open() {
 
 If you add a page object for another async-loading page, follow the same pattern — wait for one concrete, known-slow element in `open()` rather than scattering ad-hoc timeouts across every test.
 
-**Gotcha — don't rely on the app redirecting you.** `LoginPage.open()` navigates straight to `/login` rather than to `BASE_URL`'s root and trusting the app to redirect. The SPA paints its dashboard shell *first* and only settles on `/login` once the auth check resolves, so a root-then-redirect navigation lets assertions run against that intermediate shell — where every login locator is absent and the URL isn't `/login` yet. This reliably failed whenever the machine was under load and passed when it wasn't, which is the signature of a race rather than a broken locator.
+**Gotcha — don't rely on the app redirecting you.** `LoginPage.open()` navigates straight to `/login` rather than to `DEV_BASE_URL`'s root and trusting the app to redirect. The SPA paints its dashboard shell *first* and only settles on `/login` once the auth check resolves, so a root-then-redirect navigation lets assertions run against that intermediate shell — where every login locator is absent and the URL isn't `/login` yet. This reliably failed whenever the machine was under load and passed when it wasn't, which is the signature of a race rather than a broken locator.
 
 **Gotcha — the 3D viewer exposes no camera API:** [`pages/experience-viewer-page.ts`](pages/experience-viewer-page.ts) drives the WebGL/three.js experience viewer (zoom, rotate) that opens from an experience's "View" button ([`pages/experiences-page.ts`](pages/experiences-page.ts)). Unlike a typical "read `window.camera.position.z`" approach to testing 3D scenes, this app exposes no `window.camera` or any camera-shaped object at all (confirmed by a recursive scan of `window`), and no zoom/rotate UI controls either — interactions are wheel/drag directly on the `<canvas>`. So zoom/rotate can only be verified by capturing the rendered canvas frame before and after the interaction and asserting it changed — either via a raw `Buffer` compare or Playwright's built-in `toHaveScreenshot()` pixel diffing. This is coarser than a real camera-property assertion — it tells you *something* rendered differently, not *what* — and is sensitive to non-deterministic rendering (see the loading-overlay gotcha below).
 
@@ -75,18 +75,18 @@ If you add a page object for another async-loading page, follow the same pattern
 
 ## Authentication
 
-The app gates most pages behind an email-OTP login, which can't be driven end-to-end in an automated test (there's no inbox to read the code from). Instead, [`helpers/auth-fixtures.ts`](helpers/auth-fixtures.ts) exports a `test`/`expect` pair that overrides Playwright's `storageState` option, so any spec importing from it runs with an already-authenticated browser context.
+The app gates most pages behind an email-OTP login. Rather than logging in inside every test, Playwright's [project dependencies](https://playwright.dev/docs/auth) drive the OTP flow once per run and hand the resulting session to everything else:
 
-- **Login spec** (`tests/ui/Login`) imports `test`/`expect` from `@playwright/test` directly — it needs a clean, unauthenticated context.
-- **Everything else** (e.g. `tests/ui/home`) imports from `../../../helpers/auth-fixtures` instead.
+- **`login` project** ([`tests/workflow/login/login.setup.ts`](tests/workflow/login/login.setup.ts)) opens `/login`, submits `EMAIL`, waits for the verification-code screen, fills in `OTP` (both from `.env`), submits, and writes the authenticated session to `.auth/state.json` (`AUTH_STORAGE_STATE`).
+- **`tests` project** (everything under `testDir`) declares `dependencies: ['login']` in [`playwright.config.ts`](playwright.config.ts), so the login setup always runs first — regardless of whether you run the full suite, a single file, or a `--grep` subset.
+- **`cleanup` project** ([`tests/workflow/login/login.teardown.ts`](tests/workflow/login/login.teardown.ts)) is wired up as the `tests` project's `teardown`, so it deletes `.auth/state.json` once after the run finishes (pass or fail) — the session file never lingers between runs.
 
-To generate the session it reuses:
+Individual specs consume the saved session the same way as before:
 
-```bash
-npx playwright codegen --save-storage=.auth/state.json https://try.satorixr.com/login
-```
+- **Login UI spec** (`tests/ui/Login`) imports `test`/`expect` from `@playwright/test` directly — it needs a clean, unauthenticated context to check the login page itself, and doesn't touch `state.json`.
+- **Everything else** (e.g. `tests/ui/home`) imports from [`helpers/auth-fixtures.ts`](helpers/auth-fixtures.ts) (or `helpers/api-fixtures.ts` / `helpers/cross-fixtures.ts` for API/consistency suites) instead, which override Playwright's `storageState` option to point at `.auth/state.json`.
 
-Log in manually in the opened browser (complete the email OTP step), then close the window — Playwright saves cookies/localStorage to `.auth/state.json`. That file is gitignored and expires with the session, so regenerate it whenever authenticated tests start failing with a 401/redirect-to-login.
+If authenticated tests start failing with a 401/redirect-to-login mid-run, check the `login` project's output first — a stale `EMAIL`/`OTP` pair is now the far more common cause than an expired manual session.
 
 ## API service layer
 
@@ -154,7 +154,7 @@ Because these tests mutate shared, persistent server state (not local fixtures),
 
 **Gotcha — don't bake "the original value" into a fixture.** `tests/workflow/branding/logo_propagation.spec.ts` overwrites tenant-wide branding, so its cleanup has to put the previous values back. That cleanup originally restored `original_company_name`/`original_company_logo` read out of `fixtures/branding_workflow.json` — hardcoded `""`/`null` that were a guess, not a reading. The cleanup therefore didn't restore the tenant, it *overwrote* it with the guess, and because `tests/api/settings` asserts `typeof settings.companyLogo === 'string'`, a nulled logo broke a completely different suite. Capture the pre-test values live in `beforeAll` via `dashboardApi.getSettings()` and restore those instead. Note the restore can't assert the logo path is byte-identical — re-uploading the image mints a fresh `/logos/<timestamp>-<hash>` path — so assert that *a* logo is set again, not *which*.
 
-**Gotcha — the catalog grid paginates, so search before you click a card.** The same branding spec drives "does an experience still render after a branding change" by clicking a card's **View** button. `ExperiencePage.open()` waits for the first card and returns, but the grid shows only `page_size` (12) cards at a time in newest-first order — and "Uno Experience" sits ~72nd of ~88. Its View button is genuinely absent from the DOM, so the click burned the full test timeout waiting for an element that was never going to appear. Any test that acts on a *specific* card must narrow the grid first (`experiencePage.search(...)`) rather than assuming `open()` renders the whole catalog. Related: that scene's `name` is `"Uno Experience "` with a **trailing space** server-side, so match it with substring matchers (`filter({ hasText })`, `toContainText`) or `.trim()` the API value — an exact-equality comparison against the fixture's `"Uno Experience"` silently finds nothing.
+**Gotcha — the catalog grid paginates, so search before you click a card.** The same branding spec drives "does an experience still render after a branding change" by clicking a card's **View** button. `ExperiencePage.open()` waits for the first card and returns, but the grid shows only `page_size` (12) cards at a time in newest-first order — and the target experience (`fixtures/experiences.json`'s `search.expected_title`, currently "Drone Experience") can easily sit dozens of cards deep. Its View button is genuinely absent from the DOM, so the click burned the full test timeout waiting for an element that was never going to appear. Any test that acts on a *specific* card must narrow the grid first (`experiencePage.search(...)`) rather than assuming `open()` renders the whole catalog. Related: catalog item names have occasionally carried a **trailing space** server-side, so match with substring matchers (`filter({ hasText })`, `toContainText`) or `.trim()` the API value rather than exact-equality — an exact comparison against the fixture's title can silently find nothing if the server-side name isn't byte-identical.
 
 **Gotcha — capture video for every run, not just failures.** The global `use.video` in `playwright.config.ts` is `'retain-on-failure'`, so a passing run normally discards its video. Workflow specs set `test.use({ video: 'on' })` at the top of the file (must be module-level, not inside `test.describe` — Playwright rejects a per-describe `video` override because it would require a new worker) so the recording is kept and attached to the Allure/Playwright report regardless of outcome — useful for these longer, stateful journeys where you want to see the actual run even when it passes.
 
@@ -221,11 +221,13 @@ cp .env.example .env   # adjust values if needed
 
 | Variable             | Purpose                                  | Default (`.env.example`)          |
 |----------------------|-------------------------------------------|-------------------------------------|
-| `BASE_URL`           | Target app URL used by tests and `playwright.config.ts`'s `use.baseURL` | `https://try.satorixr.com/login` |
-| `AUTH_STORAGE_STATE` | Path to the saved logged-in session used by `helpers/auth-fixtures.ts` | `./.auth/state.json` |
+| `DEV_BASE_URL`       | Target app URL used by tests and `playwright.config.ts`'s `use.baseURL` | `https://dev.devsatorixr.com` |
+| `AUTH_STORAGE_STATE` | Path to the saved logged-in session, written by the `login` project and read by `helpers/auth-fixtures.ts` | `./.auth/state.json` |
+| `EMAIL`              | Account email the `login` project submits on the login form | `test1@satorixr.com` |
+| `OTP`                | Verification code the `login` project submits on the OTP screen | `123456` |
 | `HEADED`             | Set to `true` to run with a visible browser window; anything else (including unset) runs headless | unset (headless) |
 
-API tests derive the origin from `BASE_URL` (e.g. `https://try.satorixr.com`) rather than hardcoding it, so changing `BASE_URL` repoints both UI and API tests.
+API tests derive the origin from `DEV_BASE_URL` (e.g. `https://dev.devsatorixr.com`) rather than hardcoding it, so changing `DEV_BASE_URL` repoints both UI and API tests.
 
 ## Running tests
 
