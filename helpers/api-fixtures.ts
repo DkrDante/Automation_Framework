@@ -1,11 +1,11 @@
 import { test as base, expect, request as pwRequest } from '@playwright/test';
-import { DashboardAPIService } from '../services/api_service';
+import { ApiService } from '../services/api_service';
 import fs from 'fs';
 import path from 'path';
 
 export const STORAGE_STATE_PATH = process.env.AUTH_STORAGE_STATE ?? path.resolve(__dirname, '../.auth/state.json');
 
-export const test = base.extend<{}, { dashboardApi: DashboardAPIService }>({
+export const test = base.extend<{}, { dashboardApi: ApiService }>({
     dashboardApi: [async ({ playwright }, use, workerInfo) => {
         const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
         
@@ -25,7 +25,7 @@ export const test = base.extend<{}, { dashboardApi: DashboardAPIService }>({
             extraHTTPHeaders
         });
 
-        const dashboardApi = new DashboardAPIService(reqContext);
+        const dashboardApi = new ApiService(reqContext);
         await use(dashboardApi);
         await reqContext.dispose();
     }, { scope: 'worker' }],

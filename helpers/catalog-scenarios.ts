@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { DashboardAPIService } from '../services/api_service';
+import { ApiService } from '../services/api_service';
 import { CatalogTarget } from './catalog-targets';
 import {
   CatalogItem,
@@ -25,7 +25,7 @@ import {
 /** Consistency scenarios are all tagged at the describe level by their spec. */
 export interface CatalogScenario {
   name: string;
-  fn: (args: { page: Page; dashboardApi: DashboardAPIService }) => Promise<void>;
+  fn: (args: { page: Page; dashboardApi: ApiService }) => Promise<void>;
 }
 
 export interface CatalogUiScenario {
@@ -118,7 +118,7 @@ export function sortScenarios(target: CatalogTarget): CatalogScenario[] {
   return [
     ...enabledSorts.map((sortLabel) => ({
       name: `sort_${slug(sortLabel)}_matches_api`,
-      fn: async ({ page, dashboardApi }: { page: Page; dashboardApi: DashboardAPIService }) => {
+      fn: async ({ page, dashboardApi }: { page: Page; dashboardApi: ApiService }) => {
         const items = unarchived(await target.allItems(dashboardApi));
         const expected = firstPageTitles(SORT_ORDERINGS[sortLabel](items), data.page_size);
 

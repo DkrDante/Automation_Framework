@@ -13,7 +13,7 @@ Playwright + TypeScript test automation for **SatoriXR** (`https://try.satorixr.
 
 ```
 pages/            Page Object Model classes (BasePage + page-specific classes)
-services/         API service classes (DashboardAPIService — typed wrapper over /api/*)
+services/         API service classes (ApiService — typed wrapper over /api/*)
 helpers/          Shared test utilities/fixtures (auth-fixtures, api-fixtures, cross-fixtures)
 fixtures/         Test data (e.g. home.json — expected page content used by tests/ui/home)
 .auth/            Saved logged-in session (state.json — gitignored)
@@ -23,6 +23,8 @@ tests/
     home/         Authenticated (via helpers/auth-fixtures.ts)
     Experiences/  Authenticated — 3D viewer interactions (see the 3D viewer gotchas under "Page Object Model" below)
   api/            HTTP-level tests (Playwright `request` fixture, no browser)
+  workflow/       End-to-end user journeys spanning multiple UI actions (e.g. upload → verify → delete), cross-checked against the API
+    background_management/  HDRI upload/delete lifecycle vs /api/hdri
   consistency/    Cross-checks between two sources of truth (UI vs API, or API vs API)
     home/         Home dashboard cards vs /api/stats
     experiences/  Experiences filters/sort vs /api/scenes + /api/products
@@ -35,7 +37,7 @@ run-tests.bat     Windows: runs the suite then generates + opens the Allure repo
 run-tests.sh      macOS/Linux/Git Bash: same, via `npm run test:report`
 ```
 
-Tests are split into `tests/ui`, `tests/api`, and `tests/consistency` so each layer can be run, tagged, and reported on independently. Add new suites under whichever folder matches how the test drives the app: purely through the browser, purely over HTTP, or — if it asserts that two sources of truth agree (a UI count matches an API response, or one API response matches another) — under `tests/consistency`, partitioned by the page/feature it's validating (see "Consistency tests" below).
+Tests are split into `tests/ui`, `tests/api`, `tests/workflow`, and `tests/consistency` so each layer can be run, tagged, and reported on independently. Add new suites under whichever folder matches how the test drives the app: purely through the browser, purely over HTTP, a multi-step user journey (`tests/workflow`, see below), or — if it asserts that two sources of truth agree (a UI count matches an API response, or one API response matches another) — under `tests/consistency`, partitioned by the page/feature it's validating (see "Consistency tests" below).
 
 ## Page Object Model
 
@@ -85,9 +87,9 @@ Log in manually in the opened browser (complete the email OTP step), then close 
 
 ## API service layer
 
-[`services/api_service.ts`](services/api_service.ts) exports `DashboardAPIService`, a typed wrapper over the app's `/api/*` endpoints (`getStats`, `getProducts`, `getScenes`, `getCategories`, `getSettings`, `getUsers`, `getAnalyticsPortfolio`, `getAnalyticsFilters`, `verifyToken`, plus small derived helpers like `getActiveProductsCount`). It's the API-test equivalent of a page object: every endpoint call is wrapped in `test.step(...)` so it shows up named in the Playwright/Allure report, and a non-200 response throws a typed `APIError` instead of returning a malformed body silently.
+[`services/api_service.ts`](services/api_service.ts) exports `ApiService`, a typed wrapper over the app's `/api/*` endpoints (`getStats`, `getProducts`, `getScenes`, `getCategories`, `getSettings`, `getUsers`, `getAnalyticsPortfolio`, `getAnalyticsFilters`, `verifyToken`, plus small derived helpers like `getActiveProductsCount`). It's the API-test equivalent of a page object: every endpoint call is wrapped in `test.step(...)` so it shows up named in the Playwright/Allure report, and a non-200 response throws a typed `APIError` instead of returning a malformed body silently.
 
-[`helpers/api-fixtures.ts`](helpers/api-fixtures.ts) provides a `dashboardApi` worker-scoped fixture that constructs `DashboardAPIService` with an authenticated `APIRequestContext` (it reads the bearer token out of `.auth/state.json`, the same session file the UI tests use). Plain API suites (`tests/api/*`) import `test`/`expect` from there directly.
+[`helpers/api-fixtures.ts`](helpers/api-fixtures.ts) provides a `dashboardApi` worker-scoped fixture that constructs `ApiService` with an authenticated `APIRequestContext` (it reads the bearer token out of `.auth/state.json`, the same session file the UI tests use). Plain API suites (`tests/api/*`) import `test`/`expect` from there directly.
 
 [`helpers/cross-fixtures.ts`](helpers/cross-fixtures.ts) layers `storageState` on top of `api-fixtures`, giving a single `test` that has **both** an authenticated `page` (browser) and `dashboardApi` (HTTP) available in the same test — this is what `tests/consistency` specs use.
 
@@ -134,6 +136,18 @@ test('category_filter_matches_linked_products_in_api', async ({ page, dashboardA
 ```
 
 **Gotcha — the card title is `scene.name`, not `scene.displayTitle`:** these two fields can differ (one real scene is named `"Excavator (Do not Edit)"` but has `displayTitle: "Earth Mover"`). Building the expected list off the wrong field produces a mismatch that looks like a UI bug but is actually a test bug — verify which field a card actually renders (e.g. via a quick `page.evaluate` dump) before writing the comparison, rather than assuming the "nicer-sounding" field is the one displayed.
+
+## Workflow tests (multi-step user journeys)
+
+`tests/workflow` holds tests that drive a full user journey through several UI actions in sequence — e.g. `tests/workflow/background_management/hdri_upload_delete.spec.ts` uploads an HDRI, asserts the success message, deletes it, and asserts the row is gone — rather than checking one page in isolation (`tests/ui`) or one thing two sources agree on (`tests/consistency`). Because each step depends on the state the previous step left behind, these are written as one `test()` with a `test.step(...)` per action (see "Tags" below for reporting) rather than split into atomic tests — unlike `tests/ui`/`tests/api`, atomicity isn't achievable here without re-doing the setup for every assertion.
+
+Each workflow spec also cross-verifies its result against the matching `/api/*` endpoint via `dashboardApi` (imported from `helpers/cross-fixtures`, the same fixture `tests/consistency` uses) — e.g. after deleting "sky" through the UI, the test re-fetches `/api/hdri` and asserts it's actually gone server-side, not just hidden from the table.
+
+Because these tests mutate shared, persistent server state (not local fixtures), each spec's `test.afterEach` re-fetches the resource and deletes any leftover created during the test — a safety net for when an assertion mid-flow fails and the normal delete step never runs, so a broken run doesn't permanently pollute the shared environment other tests/users see.
+
+**Gotcha — "Delete" isn't a single click.** The HDRI Manager's delete icon (`aria-label="Delete HDRI"`) doesn't delete on click — it opens a confirm modal ("Delete HDRI — Are you sure you want to delete "X"? This action cannot be undone.") with its own **Delete**/Cancel buttons, and the `DELETE /api/hdri/:id` request only fires once that modal's **Delete** button is clicked. This was confirmed by watching network traffic during a manual run — clicking only the row icon fires no request at all. If you add delete flows for other resources, check for the same confirm-modal pattern rather than assuming the row action deletes directly.
+
+**Gotcha — capture video for every run, not just failures.** The global `use.video` in `playwright.config.ts` is `'retain-on-failure'`, so a passing run normally discards its video. Workflow specs set `test.use({ video: 'on' })` at the top of the file (must be module-level, not inside `test.describe` — Playwright rejects a per-describe `video` override because it would require a new worker) so the recording is kept and attached to the Allure/Playwright report regardless of outcome — useful for these longer, stateful journeys where you want to see the actual run even when it passes.
 
 ## Data-driven, atomic tests
 

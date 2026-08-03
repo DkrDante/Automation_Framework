@@ -16,6 +16,10 @@ export class BackgroundManagementPage extends BasePage {
   readonly fileSizeColumnHeader: Locator;
   readonly updatedByColumnHeader: Locator;
   readonly actionsColumnHeader: Locator;
+  readonly addNewHdriBtn: Locator;
+  readonly deleteConfirmHeading: Locator;
+  readonly deleteConfirmBtn: Locator;
+  readonly deleteCancelBtn: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -33,10 +37,42 @@ export class BackgroundManagementPage extends BasePage {
     this.fileSizeColumnHeader = page.getByRole('columnheader', { name: 'File Size (MB)' });
     this.updatedByColumnHeader = page.getByRole('columnheader', { name: 'Updated By' });
     this.actionsColumnHeader = page.getByRole('columnheader', { name: 'Actions' });
+    this.addNewHdriBtn = page.getByRole('link', { name: 'Add New HDRI' });
+    this.deleteConfirmHeading = page.getByRole('heading', { name: 'Delete HDRI' });
+    this.deleteConfirmBtn = page.getByRole('button', { name: 'Delete', exact: true });
+    this.deleteCancelBtn = page.getByRole('button', { name: 'Cancel' });
   }
 
   async open() {
     const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
     await this.page.goto(`${origin}/hdri/manage`, { waitUntil: 'networkidle' });
+  }
+
+  /** The catalog table row whose Name cell matches `displayName` exactly. */
+  hdriRow(displayName: string): Locator {
+    return this.page.locator('table tbody tr').filter({
+      has: this.page.getByText(displayName, { exact: true }),
+    });
+  }
+
+  uploadSuccessMessage(displayName: string): Locator {
+    return this.page.getByText(`"${displayName}" uploaded successfully.`);
+  }
+
+  deleteConfirmMessage(displayName: string): Locator {
+    return this.page.getByText(`Are you sure you want to delete "${displayName}"? This action cannot be undone.`);
+  }
+
+  /** Selects `filePath` via the hidden file input behind "Choose HDRI". */
+  async chooseHdriFile(filePath: string) {
+    const fileChooserPromise = this.page.waitForEvent('filechooser');
+    await this.chooseHdriBtn.click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(filePath);
+  }
+
+  /** Row-scoped "Delete HDRI" icon button — opens the confirm modal. */
+  deleteHdriBtn(displayName: string): Locator {
+    return this.hdriRow(displayName).getByRole('button', { name: 'Delete HDRI' });
   }
 }
