@@ -25,6 +25,9 @@ tests/
   api/            HTTP-level tests (Playwright `request` fixture, no browser)
   workflow/       End-to-end user journeys spanning multiple UI actions (e.g. upload → verify → delete), cross-checked against the API
     background_management/  HDRI upload/delete lifecycle vs /api/hdri
+    material_management/    Solid-colour material add/edit/delete lifecycle vs /api/material-presets
+    analytics/              Org-wide dashboard → Experience Performance drilldown → back, vs /api/new-analytics/dashboard
+    branding/               Company logo + name save, then an experience still renders, vs /api/settings
   consistency/    Cross-checks between two sources of truth (UI vs API, or API vs API)
     home/         Home dashboard cards vs /api/stats
     experiences/  Experiences filters/sort vs /api/scenes + /api/products
@@ -147,6 +150,12 @@ Because these tests mutate shared, persistent server state (not local fixtures),
 
 **Gotcha — "Delete" isn't a single click.** The HDRI Manager's delete icon (`aria-label="Delete HDRI"`) doesn't delete on click — it opens a confirm modal ("Delete HDRI — Are you sure you want to delete "X"? This action cannot be undone.") with its own **Delete**/Cancel buttons, and the `DELETE /api/hdri/:id` request only fires once that modal's **Delete** button is clicked. This was confirmed by watching network traffic during a manual run — clicking only the row icon fires no request at all. If you add delete flows for other resources, check for the same confirm-modal pattern rather than assuming the row action deletes directly.
 
+**Gotcha — "Remove logo" is a separate request from "Save Settings", and the two race.** The branding form looks like one form with one Save button, but the **Remove** button opens a native `confirm()` and then fires its own `DELETE /api/settings/logo` immediately; only the name/colour travel in the Save `PUT /api/settings`. `BrandingPage.removeLogo()` originally returned as soon as the click landed, leaving that DELETE in flight — the Save PUT issued right after would race it and write the *old* logo path back, so an assertion immediately after Save read the stale logo while the DELETE applied a moment later and flipped it to `null`. That reads exactly like a flaky assertion and is actually a request-ordering bug in the test. `removeLogo()` now waits for the DELETE response (and for the preview to disappear) before returning. When you add page-object methods for other controls, check whether the button owns a request of its own rather than assuming it only mutates form state.
+
+**Gotcha — don't bake "the original value" into a fixture.** `tests/workflow/branding/logo_propagation.spec.ts` overwrites tenant-wide branding, so its cleanup has to put the previous values back. That cleanup originally restored `original_company_name`/`original_company_logo` read out of `fixtures/branding_workflow.json` — hardcoded `""`/`null` that were a guess, not a reading. The cleanup therefore didn't restore the tenant, it *overwrote* it with the guess, and because `tests/api/settings` asserts `typeof settings.companyLogo === 'string'`, a nulled logo broke a completely different suite. Capture the pre-test values live in `beforeAll` via `dashboardApi.getSettings()` and restore those instead. Note the restore can't assert the logo path is byte-identical — re-uploading the image mints a fresh `/logos/<timestamp>-<hash>` path — so assert that *a* logo is set again, not *which*.
+
+**Gotcha — the catalog grid paginates, so search before you click a card.** The same branding spec drives "does an experience still render after a branding change" by clicking a card's **View** button. `ExperiencePage.open()` waits for the first card and returns, but the grid shows only `page_size` (12) cards at a time in newest-first order — and "Uno Experience" sits ~72nd of ~88. Its View button is genuinely absent from the DOM, so the click burned the full test timeout waiting for an element that was never going to appear. Any test that acts on a *specific* card must narrow the grid first (`experiencePage.search(...)`) rather than assuming `open()` renders the whole catalog. Related: that scene's `name` is `"Uno Experience "` with a **trailing space** server-side, so match it with substring matchers (`filter({ hasText })`, `toContainText`) or `.trim()` the API value — an exact-equality comparison against the fixture's `"Uno Experience"` silently finds nothing.
+
 **Gotcha — capture video for every run, not just failures.** The global `use.video` in `playwright.config.ts` is `'retain-on-failure'`, so a passing run normally discards its video. Workflow specs set `test.use({ video: 'on' })` at the top of the file (must be module-level, not inside `test.describe` — Playwright rejects a per-describe `video` override because it would require a new worker) so the recording is kept and attached to the Allure/Playwright report regardless of outcome — useful for these longer, stateful journeys where you want to see the actual run even when it passes.
 
 ## Data-driven, atomic tests
@@ -176,6 +185,7 @@ Tests are tagged using Playwright's built-in `tag` option on `test.describe`/`te
 | `@ui`           | Browser-driven test (`tests/ui`)                    |
 | `@api`          | HTTP-level test (`tests/api`)                       |
 | `@consistency`  | Cross-check between two sources of truth (`tests/consistency`) |
+| `@workflow`     | Multi-step user journey (`tests/workflow`)           |
 | `@regression`   | Part of the core regression suite                   |
 | `@smoke`        | Fast, critical-path check                           |
 

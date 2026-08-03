@@ -115,6 +115,11 @@ export class AnalyticsPage extends BasePage {
   async open() {
     const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
     await this.page.goto(`${origin}/new-analytics`, { waitUntil: 'domcontentloaded' });
+    // The shell paints in ~450ms but the dashboard's data arrives separately (~750ms
+    // unloaded, far longer under concurrent workers). Wait for one concrete data-backed
+    // element here, the same way HomePage/MaterialManagementPage do, so no individual
+    // test has to race that load with its own ad-hoc timeout.
+    await this.totalProductsCard.waitFor({ state: 'visible', timeout: 30000 });
   }
 
   async selectExperienceForDrilldown(experienceName: string, searchTerm: string) {
@@ -128,5 +133,11 @@ export class AnalyticsPage extends BasePage {
 
   experienceStatCard(name: string): Locator {
     return this.page.getByText(name, { exact: true });
+  }
+
+  // A drilldown stat renders as two sibling spans — the value first, then the label
+  // ("2" + "Total Unique Users") — so the value is only reachable relative to the label.
+  experienceStatValue(name: string): Locator {
+    return this.experienceStatCard(name).locator('xpath=preceding-sibling::span[1]');
   }
 }

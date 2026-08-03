@@ -9,9 +9,12 @@ test.use({ video: 'on' });
 
 test.describe('Workflow — Background Management: upload then delete an HDRI', { tag: ['@workflow', '@regression'] }, () => {
   test.afterEach(async ({ dashboardApi }) => {
+    // Delete every leftover, not just the first — a single find() strands duplicates
+    // and the next run then trips the app's uniqueness check on the name.
     const { items } = await dashboardApi.getHdris();
-    const leftover = items.find((i: any) => i.name === HDRI_NAME);
-    if (leftover) await dashboardApi.deleteHdri(leftover.id);
+    for (const leftover of items.filter((i: any) => i.name === HDRI_NAME)) {
+      await dashboardApi.deleteHdri(leftover.id);
+    }
   });
 
   test('upload "sky" HDRI, verify success, delete it, cross-verify against /api/hdri', async ({ page, dashboardApi }) => {

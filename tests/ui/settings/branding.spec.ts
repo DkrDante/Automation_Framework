@@ -31,11 +31,18 @@ test.describe('Settings — Company Branding UI Exhaustive', { tag: ['@ui', '@re
       await expect(brandingPage.uploadLogoBtn).toBeVisible();
     });
 
-    test('Remove logo button is visible', async ({ page }) => {
+    test('Remove logo button is visible exactly when a logo is set', async ({ page }) => {
       const brandingPage = new BrandingPage(page);
       await brandingPage.open();
 
-      await expect(brandingPage.removeBtn).toBeVisible();
+      // Remove is conditional UI — it renders only alongside an existing logo preview.
+      // A tenant with no logo is a legitimate state (the branding workflow spec restores
+      // the tenant to exactly that when it started with none), so assert the invariant
+      // in both directions rather than assuming a logo is always present.
+      await expect(brandingPage.logoHelperText).toBeVisible();
+      const hasLogo = await brandingPage.logoPreview.isVisible();
+
+      await expect(brandingPage.removeBtn).toBeVisible({ visible: hasLogo });
     });
 
     test('Logo file upload helper text is visible', async ({ page }) => {

@@ -69,7 +69,7 @@ export class ApiService {
         });
     }
 
-    async getMaterialPresets(): Promise<any[]> {
+    async getMaterialPresets(): Promise<{ items: any[]; count: number }> {
         return test.step('API — fetch material presets', async () => {
             return this._get('/api/material-presets');
         });

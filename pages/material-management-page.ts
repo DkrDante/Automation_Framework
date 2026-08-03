@@ -53,6 +53,24 @@ export class MaterialManagementPage extends BasePage {
     return this.page.getByRole('heading', { name: `Edit Solid Colour — ${displayName}` });
   }
 
+  /**
+   * Submit the edit form and wait for the save to actually land.
+   *
+   * "Save Changes" is not a single update request — the app DELETEs the existing
+   * preset and POSTs a replacement (the material's id changes in the process), then
+   * refetches the list. The form only closes once that whole chain resolves, which
+   * regularly outruns a 5s assertion timeout when workers are competing for the live
+   * backend. Waiting on the POST means callers assert against a settled page.
+   */
+  async saveChanges() {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/api/material-presets') && response.request().method() === 'POST'
+    );
+    await this.saveChangesBtn.click();
+    return responsePromise;
+  }
+
   /** Row-scoped "Edit texture" icon button — opens the edit form pre-filled with current values. */
   editBtn(displayName: string): Locator {
     return this.materialCard(displayName).getByRole('button', { name: 'Edit texture' });

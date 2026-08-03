@@ -9,9 +9,15 @@ test.use({ video: 'on' });
 
 test.describe('Workflow — Material Management: add, edit, then delete a Solid Colour material', { tag: ['@workflow', '@regression'] }, () => {
   test.afterEach(async ({ dashboardApi }) => {
+    // Delete *every* leftover, not just the first. The edit step doesn't update in
+    // place — it DELETEs the preset and POSTs a replacement under a new id — so a
+    // failure mid-edit can leave more than one row carrying this name. find() would
+    // strand the rest, and the app rejects the next run's creation with "Display name
+    // must be unique", which is why this spec kept failing on alternating steps.
     const { items } = await dashboardApi.getMaterialPresets();
-    const leftover = items.find((m: any) => m.name === MATERIAL_NAME);
-    if (leftover) await dashboardApi.deleteMaterialPreset(leftover.id);
+    for (const leftover of items.filter((m: any) => m.name === MATERIAL_NAME)) {
+      await dashboardApi.deleteMaterialPreset(leftover.id);
+    }
   });
 
   test('add "AutomationTestMaterial" solid colour, edit its colour, then delete it', async ({ page, dashboardApi }) => {
@@ -66,7 +72,7 @@ test.describe('Workflow — Material Management: add, edit, then delete a Solid 
     await test.step('Change the colour and save', async () => {
       await matPage.colorInput.fill(UPDATED_COLOR);
       await expect(matPage.colorInput).toHaveValue(UPDATED_COLOR);
-      await matPage.saveChangesBtn.click();
+      await matPage.saveChanges();
     });
 
     await test.step('Verify the edit — form closes and the material card is still present', async () => {

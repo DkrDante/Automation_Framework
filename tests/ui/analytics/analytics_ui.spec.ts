@@ -227,8 +227,11 @@ test.describe('Analytics UI Exhaustive', { tag: ['@ui', '@regression'] }, () => 
       const analyticsPage = new AnalyticsPage(page);
       await analyticsPage.open();
 
+      // The User Activity Log is fetched separately from the dashboard stats that
+      // open() waits on, and lands ~4s later even on an idle machine — so it needs
+      // real headroom on top of that, not the 10s that was timing out under load.
       const rows = page.locator('table tbody tr');
-      await expect(rows.first()).toBeVisible({ timeout: 10000 });
+      await expect(rows.first()).toBeVisible({ timeout: 30000 });
       const initialRowCount = await rows.count();
 
       await analyticsPage.searchActivitiesInput.fill(drilldownData.target_experience_name);

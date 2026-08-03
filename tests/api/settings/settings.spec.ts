@@ -21,7 +21,10 @@ test.describe('Settings API Exhaustive', { tag: ['@api', '@regression'] }, () =>
         
         expect(typeof settings.companyName).toBe('string');
         expect(typeof settings.companyColor).toBe('string');
-        expect(typeof settings.companyLogo).toBe('string');
+        // A tenant with no logo uploaded returns null here, and the branding workflow
+        // spec legitimately restores the tenant to that state — null is a valid value
+        // for this field, not a schema break.
+        expect(settings.companyLogo === null || typeof settings.companyLogo === 'string').toBe(true);
         
         expect(settings).toHaveProperty('features');
         expect(typeof settings.features).toBe('object');
@@ -53,7 +56,9 @@ test.describe('Settings API Exhaustive', { tag: ['@api', '@regression'] }, () =>
 
     test('settings_company_logo_is_valid_path', () => {
         const settings = settingsResponse.settings;
-        if (settings.companyLogo.length > 0) {
+        // Truthiness, not `.length` — companyLogo is null (not "") when unset, and
+        // reading .length off it throws before the assertion is ever reached.
+        if (settings.companyLogo) {
             expect(settings.companyLogo).toMatch(/\.(png|jpg|jpeg|svg|webp)$/i);
         }
     });
