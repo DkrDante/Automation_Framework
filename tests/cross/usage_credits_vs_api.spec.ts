@@ -78,6 +78,7 @@ test.describe('Cross — Usage UI vs Credits API', { tag: ['@cross', '@regressio
     });
 
     test('credits_breakdown_by_user_top_email_visible_in_table', async ({ page }) => {
+      test.skip(!breakdown.rows || breakdown.rows.length === 0, 'No breakdown rows available for testing');
       const topUser: string = breakdown.rows[0].label;
 
       const usagePage = new UsagePage(page);
