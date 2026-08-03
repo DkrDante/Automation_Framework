@@ -2,10 +2,12 @@ import { test, expect } from '../../../helpers/api-fixtures';
 
 let portfolioResponse: any;
 let filtersResponse: any;
+let dashboardOrgWideResponse: any;
 
 test.beforeAll(async ({ dashboardApi }) => {
     portfolioResponse = await dashboardApi.getAnalyticsPortfolio();
     filtersResponse = await dashboardApi.getAnalyticsFilters();
+    dashboardOrgWideResponse = await dashboardApi.getAnalyticsDashboard();
 });
 
 test.describe('Analytics Portfolio API', { tag: ['@api', '@regression'] }, () => {
@@ -100,6 +102,57 @@ test.describe('Analytics Portfolio API', { tag: ['@api', '@regression'] }, () =>
             'timeline', 'deviceDistribution', 'viewSourceBreakdown',
             'topExperiences', 'topUsers', 'userActivityLog',
             'generatedAt', 'filters'
+        ];
+        for (const section of expectedSections) {
+            expect(data).toHaveProperty(section);
+        }
+    });
+});
+
+test.describe('Analytics Dashboard API', { tag: ['@api', '@regression'] }, () => {
+    test('dashboard_top_level_schema', () => {
+        expect(dashboardOrgWideResponse.success).toBe(true);
+        expect(dashboardOrgWideResponse).toHaveProperty('data');
+        expect(dashboardOrgWideResponse).toHaveProperty('tenant');
+        expect(typeof dashboardOrgWideResponse.tenant).toBe('string');
+        expect(dashboardOrgWideResponse).toHaveProperty('generatedAt');
+        expect(typeof dashboardOrgWideResponse.generatedAt).toBe('string');
+    });
+
+    test('dashboard_overview_is_stripped_down_two_field_variant', () => {
+        const overview = dashboardOrgWideResponse.data.overview;
+        expect(Object.keys(overview).sort()).toEqual(['events24h', 'totalEvents']);
+        expect(typeof overview.totalEvents).toBe('number');
+        expect(typeof overview.events24h).toBe('number');
+    });
+
+    test('dashboard_user_metrics_schema', () => {
+        const userMetrics = dashboardOrgWideResponse.data.userMetrics;
+        expect(typeof userMetrics.totalUniqueUsers).toBe('number');
+        expect(typeof userMetrics.newUsers).toBe('number');
+        expect(typeof userMetrics.recurringUsers).toBe('number');
+    });
+
+    test('dashboard_session_metrics_schema', () => {
+        const sessionMetrics = dashboardOrgWideResponse.data.sessionMetrics;
+        expect(typeof sessionMetrics.totalSessions).toBe('number');
+        expect(typeof sessionMetrics.activeSessions).toBe('number');
+        expect(typeof sessionMetrics.avgSessionsPerUser).toBe('number');
+        expect(typeof sessionMetrics.totalDuration).toBe('string');
+        expect(typeof sessionMetrics.avgDurationPerUser).toBe('string');
+    });
+
+    test('dashboard_does_not_include_top_experiences_or_flat_users_section', () => {
+        expect(dashboardOrgWideResponse.data).not.toHaveProperty('topExperiences');
+        expect(dashboardOrgWideResponse.data).not.toHaveProperty('users');
+    });
+
+    test('dashboard_data_has_all_sections', () => {
+        const data = dashboardOrgWideResponse.data;
+        const expectedSections = [
+            'overview', 'engagement', 'experiences', 'deviceDistribution',
+            'viewSourceBreakdown', 'userMetrics', 'sessionMetrics',
+            'topUsers', 'userActivityLog', 'timeline', 'filters', 'generatedAt'
         ];
         for (const section of expectedSections) {
             expect(data).toHaveProperty(section);

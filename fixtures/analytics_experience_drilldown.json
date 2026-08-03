@@ -1,0 +1,9 @@
+{
+  "target_experience_name": "Uno Experience",
+  "search_term": "Uno",
+  "org_wide_heading": "Dashboard",
+  "drilldown_heading": "Experience Performance",
+  "placeholder_title": "Select an Experience",
+  "placeholder_message": "Please select an experience from the filters to view detailed performance metrics.",
+  "drilldown_stat_cards": ["Total Unique Users", "Active Sessions", "Total Duration"]
+}
