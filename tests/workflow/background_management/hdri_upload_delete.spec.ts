@@ -9,7 +9,6 @@ test.use({ video: 'on' });
 
 test.describe('Workflow — Background Management: upload then delete an HDRI', { tag: ['@workflow', '@regression'] }, () => {
   test.afterEach(async ({ dashboardApi }) => {
-    // Safety net: if an assertion above failed mid-flow, don't leave "sky" behind in the shared catalog.
     const { items } = await dashboardApi.getHdris();
     const leftover = items.find((i: any) => i.name === HDRI_NAME);
     if (leftover) await dashboardApi.deleteHdri(leftover.id);
@@ -42,7 +41,8 @@ test.describe('Workflow — Background Management: upload then delete an HDRI', 
     });
 
     await test.step('Upload success message is visible', async () => {
-      await expect(bgPage.uploadSuccessMessage(HDRI_NAME)).toBeVisible();
+      // The upload POST (~4MB fixture) can take longer than the default 5s to process server-side.
+      await expect(bgPage.uploadSuccessMessage(HDRI_NAME)).toBeVisible({ timeout: 20000 });
     });
 
     await test.step('Cross-verify with API — "sky" now present in /api/hdri', async () => {
