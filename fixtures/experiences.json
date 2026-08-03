@@ -1,0 +1,31 @@
+{
+  "experiences_url_pattern": ".*/experiences.*",
+  "page_heading": "Experiences",
+  "page_subheading": "Browse, manage, and customize your interactive 3D experiences.",
+  "create_experience_button": "Create Experience",
+  "create_experience_href": "/experience/create",
+  "search_placeholder": "Search experiences...",
+  "page_size": 12,
+  "default_sort": "Newest First",
+  "default_status": "Unarchived",
+  "sort_options": [
+    "Newest First",
+    "Oldest First",
+    "Name A-Z",
+    "Name Z-A",
+    "Most Viewed",
+    "Highest Rated"
+  ],
+  "disabled_sort_options": ["Most Viewed", "Highest Rated"],
+  "status_options": ["Unarchived", "Archived"],
+  "card_actions": ["View", "Edit", "Archive"],
+  "search": {
+    "term": "uno",
+    "term_uppercase": "UNO",
+    "term_partial": "Uno Exp",
+    "expected_title": "Uno Experience",
+    "no_match_term": "zzz-no-such-experience",
+    "empty_state_heading": "No matching experiences",
+    "empty_state_hint": "Try adjusting your search or filters"
+  }
+}
