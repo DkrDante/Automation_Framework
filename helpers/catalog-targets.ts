@@ -1,5 +1,5 @@
 import { Page } from '@playwright/test';
-import { DashboardAPIService } from '../services/api_service';
+import { ApiService } from '../services/api_service';
 import { CatalogPage, CatalogFixture } from '../pages/catalog-page';
 import { ExperiencePage } from '../pages/experiences-page';
 import { ProductsPage } from '../pages/products-page';
@@ -22,10 +22,10 @@ export interface CatalogTarget {
   data: CatalogFixture;
   newPage(page: Page): CatalogPage;
   /** Every item the page can list, in API order and including archived ones. */
-  allItems(api: DashboardAPIService): Promise<CatalogItem[]>;
+  allItems(api: ApiService): Promise<CatalogItem[]>;
   /** Same, narrowed to a category slug at the given level. */
   itemsInCategory(
-    api: DashboardAPIService,
+    api: ApiService,
     slug: string,
     level: CategoryLevel
   ): Promise<CatalogItem[]>;
