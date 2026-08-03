@@ -14,8 +14,8 @@ export class HomePage extends BasePage {
   }
 
   async open() {
-    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
-    await super.goto(origin);
+    const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com').origin;
+    await super.goto(`${origin}/home`);
     // Overview stats load asynchronously after the shell renders — wait once here
     // so every subsequent assertion isn't racing the same slow dashboard API.
     await this.overviewCard('Total Products').waitFor({ state: 'visible', timeout: 30000 });

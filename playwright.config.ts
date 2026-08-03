@@ -11,6 +11,8 @@ export default defineConfig({
   ],
   use: {
     baseURL: process.env.BASE_URL,
+    // Set HEADED=true to run with a visible browser window; defaults to headless.
+    headless: process.env.HEADED !== 'true',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

@@ -58,8 +58,10 @@ export class UsagePage extends BasePage {
 
   async open() {
     const origin = new URL(process.env.BASE_URL ?? 'https://try.satorixr.com/login').origin;
-    // networkidle ensures all credits API calls (summary, detail, trend, breakdown) complete
-    await this.page.goto(`${origin}/usage`, { waitUntil: 'networkidle' });
+    // networkidle never resolves here — the app polls persistently (see CLAUDE.md) —
+    // so wait for the one concrete element the credits card renders once its data lands.
+    await super.goto(`${origin}/usage`);
+    await this.creditsConsumedLabel.waitFor({ state: 'visible', timeout: 30000 });
   }
 
   /** Returns the displayed "Credits Consumed" value as a number (e.g. "2,043" → 2043) */

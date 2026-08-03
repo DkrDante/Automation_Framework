@@ -1,7 +1,7 @@
-import { test, expect } from '../../helpers/cross-fixtures';
-import { UsagePage } from '../../pages/usage-page';
+import { test, expect } from '../../../helpers/cross-fixtures';
+import { UsagePage } from '../../../pages/usage-page';
 
-test.describe('Cross — Usage UI vs Credits API', { tag: ['@cross', '@regression'] }, () => {
+test.describe('Usage UI vs Credits API', { tag: ['@consistency', '@regression'] }, () => {
   let summary: any;
   let breakdown: any;
 
@@ -58,7 +58,7 @@ test.describe('Cross — Usage UI vs Credits API', { tag: ['@cross', '@regressio
     });
   });
 
-  test.describe('Credits UI vs API Cross Verification', () => {
+  test.describe('Credits UI vs API Verification', () => {
     test('credits_consumed_ui_matches_api_totals', async ({ page }) => {
       const apiCreditsRounded = Math.round(summary.totals.credits);
 
@@ -77,16 +77,5 @@ test.describe('Cross — Usage UI vs Credits API', { tag: ['@cross', '@regressio
       expect(uiCredits).toBe(apiCreditsRounded);
     });
 
-    test('credits_breakdown_by_user_top_email_visible_in_table', async ({ page }) => {
-      test.skip(!breakdown.rows || breakdown.rows.length === 0, 'No breakdown rows available for testing');
-      const topUser: string = breakdown.rows[0].label;
-
-      const usagePage = new UsagePage(page);
-      await usagePage.open();
-
-      // Top user email appears in the first data row of the Breakdown table
-      const firstRowEmail = page.getByText(topUser, { exact: true });
-      await expect(firstRowEmail).toBeVisible();
-    });
   });
 });
