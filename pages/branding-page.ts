@@ -48,9 +48,21 @@ export class BrandingPage extends BasePage {
     await this.logoPreview.waitFor({ state: 'visible' });
   }
 
+  // Removing the logo is NOT part of the "Save Settings" PUT — the button opens a
+  // native confirm and then fires its own DELETE /api/settings/logo. Returning as soon
+  // as the click lands leaves that request in flight, and a Save PUT issued right
+  // afterwards races it and writes the old logo path back; the DELETE then applies and
+  // the value flips to null moments later. Wait the DELETE out so the two serialize.
   async removeLogo() {
+    const responsePromise = this.page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/settings/logo') && response.request().method() === 'DELETE'
+    );
     this.page.once('dialog', (dialog) => dialog.accept());
     await this.removeBtn.click();
+    const response = await responsePromise;
+    await this.logoPreview.waitFor({ state: 'hidden' });
+    return response;
   }
 
   async saveAndConfirm() {

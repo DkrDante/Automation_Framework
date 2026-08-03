@@ -7,7 +7,7 @@ export class APIError extends Error {
     }
 }
 
-export class DashboardAPIService {
+export class ApiService {
     constructor(private request: APIRequestContext) {}
 
     private async _get(endpoint: string): Promise<any> {
@@ -16,6 +16,14 @@ export class DashboardAPIService {
             throw new APIError(endpoint, response.status());
         }
         return await response.json();
+    }
+
+    private async _delete(endpoint: string): Promise<any> {
+        const response = await this.request.delete(endpoint);
+        if (response.status() !== 200) {
+            throw new APIError(endpoint, response.status());
+        }
+        return await response.json().catch(() => undefined);
     }
 
     async verifyToken(): Promise<any> {
@@ -46,6 +54,30 @@ export class DashboardAPIService {
     async getScenes(): Promise<any> {
         return test.step('API — fetch scenes list', async () => {
             return this._get('/api/scenes');
+        });
+    }
+
+    async getHdris(): Promise<{ items: any[]; count: number }> {
+        return test.step('API — fetch HDRI catalog', async () => {
+            return this._get('/api/hdri');
+        });
+    }
+
+    async deleteHdri(id: string): Promise<any> {
+        return test.step(`API — delete HDRI "${id}"`, async () => {
+            return this._delete(`/api/hdri/${id}`);
+        });
+    }
+
+    async getMaterialPresets(): Promise<{ items: any[]; count: number }> {
+        return test.step('API — fetch material presets', async () => {
+            return this._get('/api/material-presets');
+        });
+    }
+
+    async deleteMaterialPreset(id: string): Promise<any> {
+        return test.step(`API — delete material preset "${id}"`, async () => {
+            return this._delete(`/api/material-presets/${id}`);
         });
     }
 

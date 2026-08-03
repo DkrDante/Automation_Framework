@@ -13,7 +13,7 @@ Playwright + TypeScript test automation for **SatoriXR** (`https://try.satorixr.
 
 ```
 pages/            Page Object Model classes (BasePage + page-specific classes)
-services/         API service classes (DashboardAPIService — typed wrapper over /api/*)
+services/         API service classes (ApiService — typed wrapper over /api/*)
 helpers/          Shared test utilities/fixtures (auth-fixtures, api-fixtures, cross-fixtures)
 fixtures/         Test data (e.g. home.json — expected page content used by tests/ui/home)
 .auth/            Saved logged-in session (state.json — gitignored)
@@ -23,6 +23,11 @@ tests/
     home/         Authenticated (via helpers/auth-fixtures.ts)
     Experiences/  Authenticated — 3D viewer interactions (see the 3D viewer gotchas under "Page Object Model" below)
   api/            HTTP-level tests (Playwright `request` fixture, no browser)
+  workflow/       End-to-end user journeys spanning multiple UI actions (e.g. upload → verify → delete), cross-checked against the API
+    background_management/  HDRI upload/delete lifecycle vs /api/hdri
+    material_management/    Solid-colour material add/edit/delete lifecycle vs /api/material-presets
+    analytics/              Org-wide dashboard → Experience Performance drilldown → back, vs /api/new-analytics/dashboard
+    branding/               Company logo + name save, then an experience still renders, vs /api/settings
   consistency/    Cross-checks between two sources of truth (UI vs API, or API vs API)
     home/         Home dashboard cards vs /api/stats
     experiences/  Experiences filters/sort vs /api/scenes + /api/products
@@ -35,7 +40,7 @@ run-tests.bat     Windows: runs the suite then generates + opens the Allure repo
 run-tests.sh      macOS/Linux/Git Bash: same, via `npm run test:report`
 ```
 
-Tests are split into `tests/ui`, `tests/api`, and `tests/consistency` so each layer can be run, tagged, and reported on independently. Add new suites under whichever folder matches how the test drives the app: purely through the browser, purely over HTTP, or — if it asserts that two sources of truth agree (a UI count matches an API response, or one API response matches another) — under `tests/consistency`, partitioned by the page/feature it's validating (see "Consistency tests" below).
+Tests are split into `tests/ui`, `tests/api`, `tests/workflow`, and `tests/consistency` so each layer can be run, tagged, and reported on independently. Add new suites under whichever folder matches how the test drives the app: purely through the browser, purely over HTTP, a multi-step user journey (`tests/workflow`, see below), or — if it asserts that two sources of truth agree (a UI count matches an API response, or one API response matches another) — under `tests/consistency`, partitioned by the page/feature it's validating (see "Consistency tests" below).
 
 ## Page Object Model
 
@@ -85,9 +90,9 @@ Log in manually in the opened browser (complete the email OTP step), then close 
 
 ## API service layer
 
-[`services/api_service.ts`](services/api_service.ts) exports `DashboardAPIService`, a typed wrapper over the app's `/api/*` endpoints (`getStats`, `getProducts`, `getScenes`, `getCategories`, `getSettings`, `getUsers`, `getAnalyticsPortfolio`, `getAnalyticsFilters`, `verifyToken`, plus small derived helpers like `getActiveProductsCount`). It's the API-test equivalent of a page object: every endpoint call is wrapped in `test.step(...)` so it shows up named in the Playwright/Allure report, and a non-200 response throws a typed `APIError` instead of returning a malformed body silently.
+[`services/api_service.ts`](services/api_service.ts) exports `ApiService`, a typed wrapper over the app's `/api/*` endpoints (`getStats`, `getProducts`, `getScenes`, `getCategories`, `getSettings`, `getUsers`, `getAnalyticsPortfolio`, `getAnalyticsFilters`, `verifyToken`, plus small derived helpers like `getActiveProductsCount`). It's the API-test equivalent of a page object: every endpoint call is wrapped in `test.step(...)` so it shows up named in the Playwright/Allure report, and a non-200 response throws a typed `APIError` instead of returning a malformed body silently.
 
-[`helpers/api-fixtures.ts`](helpers/api-fixtures.ts) provides a `dashboardApi` worker-scoped fixture that constructs `DashboardAPIService` with an authenticated `APIRequestContext` (it reads the bearer token out of `.auth/state.json`, the same session file the UI tests use). Plain API suites (`tests/api/*`) import `test`/`expect` from there directly.
+[`helpers/api-fixtures.ts`](helpers/api-fixtures.ts) provides a `dashboardApi` worker-scoped fixture that constructs `ApiService` with an authenticated `APIRequestContext` (it reads the bearer token out of `.auth/state.json`, the same session file the UI tests use). Plain API suites (`tests/api/*`) import `test`/`expect` from there directly.
 
 [`helpers/cross-fixtures.ts`](helpers/cross-fixtures.ts) layers `storageState` on top of `api-fixtures`, giving a single `test` that has **both** an authenticated `page` (browser) and `dashboardApi` (HTTP) available in the same test — this is what `tests/consistency` specs use.
 
@@ -135,6 +140,24 @@ test('category_filter_matches_linked_products_in_api', async ({ page, dashboardA
 
 **Gotcha — the card title is `scene.name`, not `scene.displayTitle`:** these two fields can differ (one real scene is named `"Excavator (Do not Edit)"` but has `displayTitle: "Earth Mover"`). Building the expected list off the wrong field produces a mismatch that looks like a UI bug but is actually a test bug — verify which field a card actually renders (e.g. via a quick `page.evaluate` dump) before writing the comparison, rather than assuming the "nicer-sounding" field is the one displayed.
 
+## Workflow tests (multi-step user journeys)
+
+`tests/workflow` holds tests that drive a full user journey through several UI actions in sequence — e.g. `tests/workflow/background_management/hdri_upload_delete.spec.ts` uploads an HDRI, asserts the success message, deletes it, and asserts the row is gone — rather than checking one page in isolation (`tests/ui`) or one thing two sources agree on (`tests/consistency`). Because each step depends on the state the previous step left behind, these are written as one `test()` with a `test.step(...)` per action (see "Tags" below for reporting) rather than split into atomic tests — unlike `tests/ui`/`tests/api`, atomicity isn't achievable here without re-doing the setup for every assertion.
+
+Each workflow spec also cross-verifies its result against the matching `/api/*` endpoint via `dashboardApi` (imported from `helpers/cross-fixtures`, the same fixture `tests/consistency` uses) — e.g. after deleting "sky" through the UI, the test re-fetches `/api/hdri` and asserts it's actually gone server-side, not just hidden from the table.
+
+Because these tests mutate shared, persistent server state (not local fixtures), each spec's `test.afterEach` re-fetches the resource and deletes any leftover created during the test — a safety net for when an assertion mid-flow fails and the normal delete step never runs, so a broken run doesn't permanently pollute the shared environment other tests/users see.
+
+**Gotcha — "Delete" isn't a single click.** The HDRI Manager's delete icon (`aria-label="Delete HDRI"`) doesn't delete on click — it opens a confirm modal ("Delete HDRI — Are you sure you want to delete "X"? This action cannot be undone.") with its own **Delete**/Cancel buttons, and the `DELETE /api/hdri/:id` request only fires once that modal's **Delete** button is clicked. This was confirmed by watching network traffic during a manual run — clicking only the row icon fires no request at all. If you add delete flows for other resources, check for the same confirm-modal pattern rather than assuming the row action deletes directly.
+
+**Gotcha — "Remove logo" is a separate request from "Save Settings", and the two race.** The branding form looks like one form with one Save button, but the **Remove** button opens a native `confirm()` and then fires its own `DELETE /api/settings/logo` immediately; only the name/colour travel in the Save `PUT /api/settings`. `BrandingPage.removeLogo()` originally returned as soon as the click landed, leaving that DELETE in flight — the Save PUT issued right after would race it and write the *old* logo path back, so an assertion immediately after Save read the stale logo while the DELETE applied a moment later and flipped it to `null`. That reads exactly like a flaky assertion and is actually a request-ordering bug in the test. `removeLogo()` now waits for the DELETE response (and for the preview to disappear) before returning. When you add page-object methods for other controls, check whether the button owns a request of its own rather than assuming it only mutates form state.
+
+**Gotcha — don't bake "the original value" into a fixture.** `tests/workflow/branding/logo_propagation.spec.ts` overwrites tenant-wide branding, so its cleanup has to put the previous values back. That cleanup originally restored `original_company_name`/`original_company_logo` read out of `fixtures/branding_workflow.json` — hardcoded `""`/`null` that were a guess, not a reading. The cleanup therefore didn't restore the tenant, it *overwrote* it with the guess, and because `tests/api/settings` asserts `typeof settings.companyLogo === 'string'`, a nulled logo broke a completely different suite. Capture the pre-test values live in `beforeAll` via `dashboardApi.getSettings()` and restore those instead. Note the restore can't assert the logo path is byte-identical — re-uploading the image mints a fresh `/logos/<timestamp>-<hash>` path — so assert that *a* logo is set again, not *which*.
+
+**Gotcha — the catalog grid paginates, so search before you click a card.** The same branding spec drives "does an experience still render after a branding change" by clicking a card's **View** button. `ExperiencePage.open()` waits for the first card and returns, but the grid shows only `page_size` (12) cards at a time in newest-first order — and "Uno Experience" sits ~72nd of ~88. Its View button is genuinely absent from the DOM, so the click burned the full test timeout waiting for an element that was never going to appear. Any test that acts on a *specific* card must narrow the grid first (`experiencePage.search(...)`) rather than assuming `open()` renders the whole catalog. Related: that scene's `name` is `"Uno Experience "` with a **trailing space** server-side, so match it with substring matchers (`filter({ hasText })`, `toContainText`) or `.trim()` the API value — an exact-equality comparison against the fixture's `"Uno Experience"` silently finds nothing.
+
+**Gotcha — capture video for every run, not just failures.** The global `use.video` in `playwright.config.ts` is `'retain-on-failure'`, so a passing run normally discards its video. Workflow specs set `test.use({ video: 'on' })` at the top of the file (must be module-level, not inside `test.describe` — Playwright rejects a per-describe `video` override because it would require a new worker) so the recording is kept and attached to the Allure/Playwright report regardless of outcome — useful for these longer, stateful journeys where you want to see the actual run even when it passes.
+
 ## Data-driven, atomic tests
 
 `tests/ui/home/home.spec.ts` is the reference pattern for new UI suites: expected page content lives in a `fixtures/*.json` file, and the spec generates one `test()` per data item at module-load time (not a loop inside a single test), so each check gets its own row in the Playwright/Allure report and fails independently:
@@ -162,6 +185,7 @@ Tests are tagged using Playwright's built-in `tag` option on `test.describe`/`te
 | `@ui`           | Browser-driven test (`tests/ui`)                    |
 | `@api`          | HTTP-level test (`tests/api`)                       |
 | `@consistency`  | Cross-check between two sources of truth (`tests/consistency`) |
+| `@workflow`     | Multi-step user journey (`tests/workflow`)           |
 | `@regression`   | Part of the core regression suite                   |
 | `@smoke`        | Fast, critical-path check                           |
 
