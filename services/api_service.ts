@@ -78,4 +78,28 @@ export class DashboardAPIService {
             return this._get('/api/new-analytics/filter-options');
         });
     }
+
+    async getAnalyticsEvents(): Promise<any> {
+        return test.step('API — fetch analytics events', async () => {
+            return this._get('/api/new-analytics/events');
+        });
+    }
+
+    async getAnalyticsSummary(): Promise<any> {
+        return test.step('API — fetch analytics summary', async () => {
+            return this._get('/api/new-analytics/summary');
+        });
+    }
+
+    async getCreditsSummary(period: string = 'current_month'): Promise<any> {
+        return test.step('API — fetch credits summary', async () => {
+            return this._get(`/api/credits/summary?period=${period}`);
+        });
+    }
+
+    async getCreditsBreakdown(dimension: string = 'user', period: string = 'current_month'): Promise<any> {
+        return test.step('API — fetch credits breakdown', async () => {
+            return this._get(`/api/credits/breakdown?period=${period}&dimension=${dimension}`);
+        });
+    }
 }
