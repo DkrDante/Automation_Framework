@@ -1,11 +1,14 @@
-import { test, expect } from '../../helpers/cross-fixtures';
+import { test, expect } from '../../../helpers/cross-fixtures';
 
-test.describe('Analytics Events Consistency', { tag: ['@cross', '@regression'] }, () => {
+test.describe('Analytics Events Consistency', { tag: ['@consistency', '@regression'] }, () => {
   let eventsResponse: any;
   let summaryResponse: any;
   let portfolioResponse: any;
 
   test.beforeAll(async ({ dashboardApi }) => {
+    // /api/new-analytics/events genuinely takes ~80s on the live backend (verified against
+    // the real dashboardApi fixture) — well past the default 30s hook timeout.
+    test.setTimeout(120000);
     eventsResponse = await dashboardApi.getAnalyticsEvents();
     summaryResponse = await dashboardApi.getAnalyticsSummary();
     portfolioResponse = await dashboardApi.getAnalyticsPortfolio();

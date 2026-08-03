@@ -13,3 +13,4 @@ sample/
 .auth/
 local-archive/
 _probe.spec.ts
+CLAUDE.md

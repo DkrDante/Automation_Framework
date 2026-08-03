@@ -26,6 +26,9 @@ tests/
   consistency/    Cross-checks between two sources of truth (UI vs API, or API vs API)
     home/         Home dashboard cards vs /api/stats
     experiences/  Experiences filters/sort vs /api/scenes + /api/products
+    products/     Products filters/sort vs /api/products
+    analytics/    /api/new-analytics/events vs /summary + /portfolio
+    usage/        Usage page credits (UI) vs /api/credits
     api/          Cross-endpoint checks not tied to one page (stats/analytics/settings/auth)
 playwright.config.ts
 run-tests.bat     Windows: runs the suite then generates + opens the Allure report
@@ -96,6 +99,9 @@ Log in manually in the opened browser (complete the email OTP step), then close 
 tests/consistency/
   home/          Dashboard cards (UI) vs /api/stats
   experiences/   Category/status/sort filters (UI) vs /api/scenes + /api/products
+  products/      Category/status/sort filters (UI) vs /api/products
+  analytics/     Analytics events (API) vs the summary/portfolio aggregations of the same data
+  usage/         Credits consumed + per-user breakdown (UI) vs /api/credits
   api/           Cross-endpoint checks not tied to one page (stats vs analytics vs settings vs auth)
 ```
 
