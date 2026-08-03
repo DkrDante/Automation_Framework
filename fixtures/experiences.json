@@ -1,10 +1,12 @@
 {
-  "experiences_url_pattern": ".*/experiences.*",
+  "route": "/experiences",
+  "url_pattern": ".*/experiences.*",
   "page_heading": "Experiences",
   "page_subheading": "Browse, manage, and customize your interactive 3D experiences.",
-  "create_experience_button": "Create Experience",
-  "create_experience_href": "/experience/create",
+  "create_link": "Create Experience",
+  "create_link_href": "/experience/create",
   "search_placeholder": "Search experiences...",
+  "filter_order": ["category", "sort", "status"],
   "page_size": 12,
   "default_sort": "Newest First",
   "default_status": "Unarchived",
@@ -19,13 +21,18 @@
   "disabled_sort_options": ["Most Viewed", "Highest Rated"],
   "status_options": ["Unarchived", "Archived"],
   "card_actions": ["View", "Edit", "Archive"],
+  "empty_state_heading": "No matching experiences",
+  "empty_state_hint": "Try adjusting your search or filters",
   "search": {
     "term": "uno",
     "term_uppercase": "UNO",
     "term_partial": "Uno Exp",
     "expected_title": "Uno Experience",
-    "no_match_term": "zzz-no-such-experience",
-    "empty_state_heading": "No matching experiences",
-    "empty_state_hint": "Try adjusting your search or filters"
+    "no_match_term": "zzz-no-such-experience"
+  },
+  "category": {
+    "label": "Automotive",
+    "slug": "automotive",
+    "sub_slug": "truck"
   }
 }
