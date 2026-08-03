@@ -11,3 +11,5 @@ coverage/
 .DS_Store
 sample/
 .auth/
+local-archive/
+_probe.spec.ts

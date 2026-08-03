@@ -1,7 +1,7 @@
-import { test, expect } from '../../helpers/cross-fixtures';
-import { HomePage } from '../../pages/home-page';
+import { test, expect } from '../../../helpers/cross-fixtures';
+import { HomePage } from '../../../pages/home-page';
 
-test.describe('Stats vs Home Cards', { tag: ['@cross', '@regression'] }, () => {
+test.describe('Stats vs Home Cards', { tag: ['@consistency', '@regression'] }, () => {
   let statsResponse: any;
 
   test.beforeAll(async ({ dashboardApi }) => {

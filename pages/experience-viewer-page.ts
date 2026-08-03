@@ -12,23 +12,58 @@ export class ExperienceViewerPage extends BasePage {
         this.loadingIndicator = page.getByText('Loading experience...');
     }
 
-    async waitForModelToLoad() {
+    // Keep this comfortably below the spec's test timeout, or the wait gets killed
+    // mid-flight and you get a confusing "test timeout" instead of a real diagnosis.
+    async waitForModelToLoad(timeoutMs: number = 60000) {
+        const deadline = Date.now() + timeoutMs;
+        const remaining = () => Math.max(0, deadline - Date.now());
+
         // The loader shows up a few seconds after navigation, not immediately —
         // don't let its absence at t=0 be mistaken for "already finished loading".
         await this.loadingIndicator.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+        await this.loadingIndicator.waitFor({ state: 'hidden', timeout: remaining() });
+        await this.canvas.waitFor({ state: 'visible', timeout: remaining() });
 
-        // The overlay can go hidden and reappear across more than one loading phase
-        // (initial load, then textures/hotspots) — require it to stay hidden for a
-        // full second before treating the model as actually ready, or a screenshot
-        // taken right in that gap ends up mid-load.
-        const deadline = Date.now() + 45000;
+        // The overlay disappearing does NOT mean the scene finished painting: this
+        // app applies the experience's background last, so there's a window where
+        // the canvas is stably showing an unstyled grey scene. Soft-wait for it —
+        // not every experience necessarily has a gradient background, so a miss
+        // here shouldn't fail the test, it just falls through to the frame check.
+        await this.page
+            .waitForFunction(
+                () => {
+                    const c = document.querySelector('canvas[data-engine]:not(#webgl-canvas)');
+                    return !!c && (c.getAttribute('style') ?? '').includes('gradient');
+                },
+                undefined,
+                { timeout: Math.min(10000, remaining()) }
+            )
+            .catch(() => {});
+
+        // The authoritative signal: the rendered frame itself has stopped changing.
+        // This subsumes overlay flicker, late textures, and camera settling in one
+        // check, and is what the screenshot assertions actually depend on.
+        await this.waitForStableFrame(deadline);
+    }
+
+    // Playwright's own toHaveScreenshot stability check only compares two frames
+    // ~100ms apart, which a slow progressive load can easily satisfy mid-render.
+    private async waitForStableFrame(deadline: number, requiredMatches: number = 3, intervalMs: number = 500) {
+        let previous: Buffer | null = null;
+        let matches = 0;
+
         while (Date.now() < deadline) {
-            await this.loadingIndicator.waitFor({ state: 'hidden', timeout: deadline - Date.now() });
-            await this.page.waitForTimeout(1000);
-            if (!(await this.loadingIndicator.isVisible())) break;
+            const frame = await this.captureFrame();
+            matches = previous?.equals(frame) ? matches + 1 : 0;
+            previous = frame;
+
+            if (matches >= requiredMatches) return;
+            await this.page.waitForTimeout(intervalMs);
         }
 
-        await this.canvas.waitFor({ state: 'visible' });
+        throw new Error(
+            `3D scene never produced ${requiredMatches} consecutive identical frames before the deadline — it is still rendering or animating.`
+        );
     }
 
     // No window.camera / zoom control is exposed by the app, so zoom/rotate are
