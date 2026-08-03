@@ -111,15 +111,24 @@ export class ApiService {
         });
     }
 
-    async getAnalyticsEvents(): Promise<any> {
+    async getAnalyticsEvents(experienceId?: string): Promise<any> {
         return test.step('API — fetch analytics events', async () => {
-            return this._get('/api/new-analytics/events');
+            const query = experienceId ? `?experienceId=${experienceId}` : '';
+            return this._get(`/api/new-analytics/events${query}`);
         });
     }
 
-    async getAnalyticsSummary(): Promise<any> {
+    async getAnalyticsSummary(experienceId?: string): Promise<any> {
         return test.step('API — fetch analytics summary', async () => {
-            return this._get('/api/new-analytics/summary');
+            const query = experienceId ? `?experienceId=${experienceId}` : '';
+            return this._get(`/api/new-analytics/summary${query}`);
+        });
+    }
+
+    async getAnalyticsDashboard(experienceId?: string): Promise<any> {
+        return test.step('API — fetch analytics dashboard (optionally scoped to an experience)', async () => {
+            const query = experienceId ? `?experienceId=${experienceId}` : '';
+            return this._get(`/api/new-analytics/dashboard${query}`);
         });
     }
 

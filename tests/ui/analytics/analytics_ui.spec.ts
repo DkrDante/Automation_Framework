@@ -1,5 +1,6 @@
 import { test, expect } from '../../../helpers/auth-fixtures';
 import { AnalyticsPage } from '../../../pages/analytics-page';
+import drilldownData from '../../../fixtures/analytics_experience_drilldown.json';
 
 test.describe('Analytics UI Exhaustive', { tag: ['@ui', '@regression'] }, () => {
   test('URL resolves to /new-analytics route', { tag: ['@smoke'] }, async ({ page }) => {
@@ -31,6 +32,43 @@ test.describe('Analytics UI Exhaustive', { tag: ['@ui', '@regression'] }, () => 
       const analyticsPage = new AnalyticsPage(page);
       await analyticsPage.open();
       await expect(analyticsPage.showFiltersBtn).toBeVisible();
+    });
+
+    test('Auto-refresh toggle switches from OFF to ON when clicked', { tag: ['@smoke'] }, async ({ page }) => {
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      await expect(analyticsPage.autoRefreshBtn).toHaveText(/Auto-refresh OFF/);
+      await analyticsPage.autoRefreshBtn.click();
+
+      await expect(analyticsPage.autoRefreshBtn).toHaveText(/Auto-refresh ON/);
+    });
+
+    test('Export Data button downloads a JSON file and the dashboard settles back afterwards', async ({ page }) => {
+      test.setTimeout(60000);
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        analyticsPage.exportDataBtn.click(),
+      ]);
+
+      expect(download.suggestedFilename()).toMatch(/^analytics-portfolio-.*\.json$/);
+      await expect(analyticsPage.totalProductsCard).toBeVisible({ timeout: 10000 });
+    });
+
+    test('Show Filters opens the filter panel and Close filters closes it', async ({ page }) => {
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      await analyticsPage.showFiltersBtn.click();
+      await expect(analyticsPage.hideFiltersBtn).toBeVisible();
+      await expect(analyticsPage.experiencePerformanceRadio).toBeVisible();
+
+      await analyticsPage.closeFiltersBtn.click();
+      await expect(analyticsPage.showFiltersBtn).toBeVisible();
+      await expect(analyticsPage.experiencePerformanceRadio).not.toBeVisible();
     });
   });
 
@@ -171,6 +209,50 @@ test.describe('Analytics UI Exhaustive', { tag: ['@ui', '@regression'] }, () => 
       const analyticsPage = new AnalyticsPage(page);
       await analyticsPage.open();
       await expect(analyticsPage.experienceCol).toBeVisible();
+    });
+
+    test('All Activities button toggles to Share-Link Only and filters the activity list', { tag: ['@smoke'] }, async ({ page }) => {
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      await analyticsPage.allActivitiesBtn.click();
+      await expect(analyticsPage.shareLinkOnlyBtn).toBeVisible();
+      await expect(page.getByText(/activities \(share-link only\)/)).toBeVisible();
+
+      await analyticsPage.shareLinkOnlyBtn.click();
+      await expect(analyticsPage.allActivitiesBtn).toBeVisible();
+    });
+
+    test('Search activities input filters the table by matching rows', async ({ page }) => {
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      const rows = page.locator('table tbody tr');
+      await expect(rows.first()).toBeVisible({ timeout: 10000 });
+      const initialRowCount = await rows.count();
+
+      await analyticsPage.searchActivitiesInput.fill(drilldownData.target_experience_name);
+      await expect(rows.first()).toContainText(drilldownData.target_experience_name);
+
+      const filteredRowCount = await rows.count();
+      expect(filteredRowCount).toBeLessThanOrEqual(initialRowCount);
+
+      await analyticsPage.searchActivitiesInput.fill('');
+      await expect(rows).toHaveCount(initialRowCount);
+    });
+
+    test('Export CSV button downloads a CSV file and the log settles back afterwards', async ({ page }) => {
+      test.setTimeout(60000);
+      const analyticsPage = new AnalyticsPage(page);
+      await analyticsPage.open();
+
+      const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        analyticsPage.exportCsvBtn.click(),
+      ]);
+
+      expect(download.suggestedFilename()).toMatch(/^user-activity-.*\.csv$/);
+      await expect(analyticsPage.userActivityLogHeading).toBeVisible({ timeout: 10000 });
     });
   });
 });
