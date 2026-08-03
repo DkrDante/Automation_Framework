@@ -6,6 +6,8 @@ export class AnalyticsPage extends BasePage {
   readonly autoRefreshBtn: Locator;
   readonly exportDataBtn: Locator;
   readonly showFiltersBtn: Locator;
+  readonly hideFiltersBtn: Locator;
+  readonly closeFiltersBtn: Locator;
 
   // Stat cards
   readonly totalProductsCard: Locator;
@@ -27,6 +29,7 @@ export class AnalyticsPage extends BasePage {
   // Activity Log
   readonly userActivityLogHeading: Locator;
   readonly allActivitiesBtn: Locator;
+  readonly shareLinkOnlyBtn: Locator;
   readonly searchActivitiesInput: Locator;
   readonly exportCsvBtn: Locator;
 
@@ -49,6 +52,10 @@ export class AnalyticsPage extends BasePage {
   readonly experiencePerformanceHeading: Locator;
   readonly selectAnExperienceTitle: Locator;
   readonly selectAnExperienceMessage: Locator;
+  readonly noResultsFoundText: Locator;
+  readonly activeFiltersText: Locator;
+  readonly ninetyDaysRangeBtn: Locator;
+  readonly thirtyDaysRangeBtn: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -56,6 +63,8 @@ export class AnalyticsPage extends BasePage {
     this.autoRefreshBtn = page.getByText(/Auto-refresh/, { exact: false });
     this.exportDataBtn = page.getByRole('button', { name: 'Export Data' });
     this.showFiltersBtn = page.getByRole('button', { name: 'Show Filters' });
+    this.hideFiltersBtn = page.getByRole('button', { name: 'Hide Filters' });
+    this.closeFiltersBtn = page.getByRole('button', { name: 'Close filters' });
 
     this.totalProductsCard = page.getByText('Total Products', { exact: true });
     this.totalExperiencesCard = page.getByText('Total Experiences', { exact: true });
@@ -73,6 +82,7 @@ export class AnalyticsPage extends BasePage {
 
     this.userActivityLogHeading = page.getByRole('heading', { name: /User Activity Log/ });
     this.allActivitiesBtn = page.getByRole('button', { name: 'All Activities' });
+    this.shareLinkOnlyBtn = page.getByRole('button', { name: 'Share-Link Only' });
     this.searchActivitiesInput = page.getByPlaceholder('Search activities...');
     this.exportCsvBtn = page.getByRole('button', { name: 'Export CSV' });
 
@@ -96,6 +106,10 @@ export class AnalyticsPage extends BasePage {
       'Please select an experience from the filters to view detailed performance metrics.',
       { exact: true }
     );
+    this.noResultsFoundText = page.getByText('No results found', { exact: true });
+    this.activeFiltersText = page.getByText('Active Filters:');
+    this.ninetyDaysRangeBtn = page.getByRole('button', { name: '90 Days' });
+    this.thirtyDaysRangeBtn = page.getByRole('button', { name: '30 Days' });
   }
 
   async open() {
